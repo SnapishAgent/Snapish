@@ -5,17 +5,24 @@
         <div class="w-full max-w-md bg-white shadow-lg">
             <!-- 메인 콘텐츠 영역 - 하단 네비게이션바 공간 확보를 위한 패딩 설정 -->
             <main class="pb-20 px-4">
-                <!-- 날씨 섹션 -->
+                <!-- 물때/날씨 섹션 -->
                 <section class="mb-6 pt-4">
                     <div class="flex justify-between items-center mb-3">
-                        <h2 class="text-lg font-medium">오늘의 날씨</h2>
+                        <router-link to="/weather-specific" class="flex flex-col items-center p-2">
+                            <h2 class="text-lg font-medium">오늘의 물때</h2> 
+                        </router-link>
                         <ChevronRightIcon class="w-5 h-5 text-gray-400" />
                     </div>
-                    <!-- 날씨 표시 카드 -->
-                    <div class="bg-gray-50 rounded-lg p-6 shadow-sm">
-                        <div class="flex items-center justify-center h-32 bg-gray-200 rounded">
-                            <CloudIcon class="w-12 h-12 text-gray-400" />
-                        </div>
+                    <!-- 물때 표시 카드 -->
+                    <div class="relative bg-gray-50 rounded-lg p-6 shadow-sm fixed-size-card" style="height: 125px; overflow: hidden; position: relative;">
+                        <!-- 새로고침 버튼 -->
+                        <button 
+                            class="absolute top-2 right-2 bg-gray-200 text-gray-600 rounded-full p-1 shadow hover:bg-gray-300"
+                            @click="refreshCard"
+                            title="새로고침"
+                        >새로고침
+                        </button>
+                        <MulddaeWidget></MulddaeWidget>
                     </div>
                 </section>
 
@@ -82,9 +89,24 @@
 /* eslint-disable */
 import {
     ChevronRightIcon,// 오른쪽 화살표 아이콘
-    CloudIcon,       // 구름 아이콘
+    // CloudIcon,       // 구름 아이콘
     FishIcon,        // 물고기 아이콘
     ImageIcon,       // 이미지 아이콘
     ClockIcon,       // 시계 아이콘
 } from 'lucide-vue-next'
+import { onMounted } from "vue";
+import { useStore } from "vuex";
+import MulddaeWidget from '../components/MulddaeWidget.vue';
+// import WeatherService from "../components/WeatherService.vue";
+
+const store = useStore();
+
+onMounted(() => {
+    store.dispatch("fetchMulddae");
+    
+    if (!store.state.currentlocation) {
+        store.dispatch("fetchLocation");
+    }
+});
+
 </script>

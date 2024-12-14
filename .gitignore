@@ -128,6 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Package_lock
+frontend/package-lock.json
 
 #custom
 .DS_Store

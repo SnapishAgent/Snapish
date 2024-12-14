@@ -1,9 +1,17 @@
 # Snapish: 물고기 판별 AI 웹 서비스
 ![image](https://github.com/user-attachments/assets/ce26f167-06ef-4978-b4bb-d459eeed751b)
 
-# 서버 설정
+# 서버 설정 (/etc/rc.local)
 ```bash
+conda activate pytorch
 sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+
+cd /home/ubuntu/Snapish/backend
+export FLASK_APP=main.py
+sudo nohup flask run --host=0.0.0.0 --port=5000 > /dev/null 2>&1 &
+
+cd /home/ubuntu/Snapish/frontend
+sudo nohup npm run serve > /dev/null 2>&1 &
 ```
 
 # 백엔드
@@ -11,19 +19,29 @@ sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 
 ## 콘다 가상환경 없다면
 ```bash
+cd /Snapish/backend
 conda env create -n snapish --file environment.yml
 conda activate snapish
 ```
-예측 모델의 가중치를 [여기](https://owncloud.tuwien.ac.at/index.php/s/kotvEsald31Pw51)에서 다운로드하세요. 백엔드에 `models` 폴더를 생성하고 (`mkdir models`), 다운로드한 `*.pth` 파일을 이 디렉토리에 복사하세요.
+예측 모델의 가중치를 [여기](http://)에서 다운로드하세요. 백엔드에 `models` 폴더를 생성하고 (`mkdir models`), 다운로드한 `*.pth` 파일을 이 디렉토리에 복사하세요.
 
 ## 콘다 가상환경 있다면
 ```bash
+cd /Snapish/backend
 pip install -r requirements.txt
 ```
 
-플라스크 앱을 다음과 같이 시작하세요. (백그라운드 작동)
+플라스크 앱을 다음과 같이 시작하세요. (윈도우 파워쉘, 백그라운드 작동)
 ```bash
+cd /Snapish/backend
 $env:FLASK_APP="main.py"
+sudo nohup flask run --host=0.0.0.0 > /dev/null 2>&1 &
+ps a
+```
+리눅스 우분투 또는 MAC는 환경설정을 아래와 같이 진행하세요.
+```bash
+cd /Snapish/backend
+export FLASK_APP="main.py"
 sudo nohup flask run --host=0.0.0.0 > /dev/null 2>&1 &
 ps a
 ```
@@ -33,12 +51,13 @@ ps a
 프론트엔드를 설정하고 실행하기 위해서는 node.js가 필요하므로 [여기](https://nodejs.org/en/)의 지침을 따르세요.
 이제 필요한 패키지를 다음과 같이 설치하세요 (시간이 좀 걸릴 수 있습니다):
 ```bash
+cd /Snapish/frontend
 npm install
 ```
-추천 항목(여기서는 여행지의 사진)의 이미지를 [여기](https://owncloud.tuwien.ac.at/index.php/s/h70PGy8EkqtQKxs)에서 다운로드하세요. `public` 폴더 아래에 `pics` 폴더를 생성하세요 (`mkdir public/pics`). 다운로드한 `*.zip`의 내용을 새로 생성된 `pics` 디렉토리에 복사하세요. 이제 `public/pics/destination_id/pic_id.jpg` 구조가 되어야 합니다.
 
 프론트엔드를 다음과 같이 컴파일하고 실행하세요. (백그라운드 작동)
 ```bash
+cd /Snapish/frontend
 sudo nohup npm run serve > /dev/null 2>&1 &
 ps a
 ```

@@ -1,8 +1,8 @@
-<!-- filepath: /c:/Users/twoimo/Documents/GitHub/Snapish/frontend/src/views/FishResultNormal.vue -->
 <template>
   <div class="min-h-screen bg-gray-100 flex flex-col">
     <!-- 헤더 -->
-    <header class="sticky top-0 bg-white px-4 py-3 flex items-center justify-between border-b z-10">
+    <header
+      class="fixed top-0 left-0 right-0 bg-white px-4 py-3 flex items-center justify-between border-b shadow-md z-50 max-w-md mx-auto">
       <div class="flex items-center">
         <button class="mr-2" @click="goBack">
           <ChevronLeftIcon class="w-6 h-6" />
@@ -20,7 +20,7 @@
     </header>
 
     <!-- 메인 콘텐츠 -->
-    <main class="flex-1 pb-20 px-4 overflow-auto">
+    <main class="flex-1 pb-20 px-4 overflow-auto mt-[60px] max-w-md mx-auto">
       <!-- 로딩 상태 -->
       <div v-if="isLoading" class="flex justify-center items-center h-64">
         <span class="text-gray-500">로딩 중...</span>

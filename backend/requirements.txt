@@ -9,8 +9,6 @@ flask-sqlalchemy
 flask-cors
 waitress
 gdrive
-<<<<<<< HEAD
 pillow
-=======
-ultralytics
->>>>>>> c81763a6b48515c8bed3a6264a3dc797ca119db9
+python-dotenv
+korean_lunar_calendar

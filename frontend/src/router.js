@@ -2,8 +2,9 @@ import { createRouter, createWebHistory } from "vue-router";
 import Home from "./views/Home.vue";
 import Community from "./views/Community.vue";
 import Profile from "./views/Profile.vue";
-import FishResultWarning from "./views/FishResultWarning.vue";
 import FishResultNormal from "./views/FishResultNormal.vue";
+import FishResultWarning from "./views/FishResultWarning.vue";
+import WeatherSpecific from "./views/WeatherSpecific.vue";
 
 // 라우트 설정
 const routes = [
@@ -16,6 +17,11 @@ const routes = [
     path: "/community",
     name: "Community",
     component: Community, // 커뮤니티 컴포넌트
+  },
+  {
+    path: "/weather-specific",
+    name: "WeatherSpecific",
+    component: WeatherSpecific, // 커뮤니티 컴포넌트
   },
   {
     path: "/profile",

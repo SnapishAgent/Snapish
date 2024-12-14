@@ -10,8 +10,11 @@
   "dependencies": {
     "axios": "^0.21.1",
     "core-js": "^3.6.5",
+    "dotenv-webpack": "^8.1.0",
     "html2canvas": "^1.4.1",
     "lucide-vue-next": "^0.244.0",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
     "vue": "^3.2.37",
     "vue-router": "^4.0.0-0",
     "vuex": "^4.0.0-0"

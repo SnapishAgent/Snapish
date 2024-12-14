@@ -15,4 +15,6 @@ dependencies:
   - gdrive
   - ultralytics
   - pillow
+  - python-dotenv
+  - korean_lunar_calendar
 prefix: /opt/anaconda3/envs/snapish
