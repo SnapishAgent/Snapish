@@ -12,5 +12,3 @@ gdrive
 pillow
 python-dotenv
 korean_lunar_calendar
-pymysql
-PyJWT

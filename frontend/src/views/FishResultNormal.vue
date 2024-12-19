@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-white flex flex-col">
+  <div class="min-h-screen bg-gray-100 flex flex-col">
     <!-- 헤더 -->
     <header
-      class="fixed top-0 left-0 right-0 bg-white px-4 py-3 flex items-center justify-between border-b z-15 max-w-md mx-auto">
+      class="fixed top-0 left-0 right-0 bg-white px-4 py-3 flex items-center justify-between border-b shadow-md z-50 max-w-md mx-auto">
       <div class="flex items-center">
         <button class="mr-2" @click="goBack">
           <ChevronLeftIcon class="w-6 h-6" />
@@ -20,7 +20,7 @@
     </header>
 
     <!-- 메인 콘텐츠 -->
-    <main class="flex-1 pb-20 px-4 overflow-auto max-w-md mx-auto">
+    <main class="flex-1 pb-20 px-4 overflow-auto mt-[60px] max-w-md mx-auto">
       <!-- 로딩 상태 -->
       <div v-if="isLoading" class="flex justify-center items-center h-64">
         <span class="text-gray-500">로딩 중...</span>
@@ -33,8 +33,7 @@
 
       <!-- 업로드된 물고기 이미지 표시 -->
       <div v-if="!isLoading && !errorMessage" class="mt-4 bg-gray-200 rounded-lg p-4 flex justify-center">
-        <img :src="imageSource" alt="물고기 사진" class="w-full h-full object-cover cursor-pointer"
-          @click="openImagePopup(imageSource)" />
+        <img :src="imageUrl" alt="물고기 사진" class="w-full h-full object-cover" />
       </div>
 
       <!-- AI 판별 결과 -->
@@ -85,105 +84,90 @@
           <span>공유하기</span>
         </button>
       </div>
-
-      <!-- 내가 잡은 물고기 페이지로 이동 버튼 -->
-      <div v-if="!isLoading && !errorMessage" class="mt-4">
-        <button class="w-full bg-blue-500 text-white py-3 px-4 rounded-lg flex items-center justify-center"
-          @click="navigateToCatches">
-          <span>내가 잡은 물고기 리스트 보기</span>
-        </button>
-      </div>
     </main>
 
     <!-- 포토카드 모달 -->
     <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div class="bg-white rounded-lg shadow-lg p-6 w-10/12 max-w-sm">
-        <h2 class="text-lg font-bold mb-4 text-center">나만의 포토카드</h2>
-        <div ref="photocard" class="bg-gray-100 p-4 rounded-lg overflow-auto">
-          <img :src="imageUrl" alt="물고기 사진" class="w-full h-64 object-contain rounded-lg" />
-          <h3 class="text-md font-semibold mt-4 text-center">{{ parsedDetections[0].label }}</h3>
+      <div class="bg-white rounded-lg shadow-lg p-4 w-10/12 max-w-sm">
+        <h2 class="text-lg font-bold mb-2 text-center">나만의 포토카드</h2>
+        <div ref="photocard" class="bg-gray-100 p-2 rounded-lg overflow-hidden">
+          <img :src="imageUrl" alt="물고기 사진" class="w-full h-48 object-cover rounded-lg" />
+          <h3 class="text-md font-semibold mt-2 text-center">{{ parsedDetections[0].label }}</h3>
           <p class="text-center text-sm">신뢰도: {{ (parsedDetections[0].confidence * 100).toFixed(2) }}%</p>
         </div>
-        <div class="mt-6 flex justify-end gap-3">
-          <button @click="closeModal" class="px-4 py-2 bg-gray-300 rounded">닫기</button>
-          <button @click="downloadPhotocard" class="px-4 py-2 bg-blue-500 text-white rounded">저장하기</button>
+        <div class="mt-4 flex justify-end gap-2">
+          <button @click="closeModal" class="px-3 py-1 bg-gray-300 rounded">닫기</button>
+          <button @click="downloadPhotocard" class="px-3 py-1 bg-blue-500 text-white rounded">저장하기</button>
         </div>
-      </div>
-    </div>
-
-    <!-- 이미지 팝업 -->
-    <div v-if="isImagePopupVisible" class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-30"
-      @click="isImagePopupVisible = false">
-      <div class="relative max-w-full max-h-full" @click.stop>
-        <img :src="popupImageUrl" alt="Popup Image"
-          class="w-full h-full object-contain rounded-lg border border-gray-200 shadow-lg" />
-        <button @click="isImagePopupVisible = false"
-          class="absolute top-2 right-2 bg-white text-black rounded-full p-1 hover:bg-gray-200 transition-colors duration-300">
-          &times;
-        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import axios from '../axios';
+import { defineProps, ref, watch } from 'vue';
+import {
+  BellIcon,
+  Settings2Icon,
+  ChevronLeftIcon,
+  Share2Icon,
+} from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
 import html2canvas from 'html2canvas';
-import { ChevronLeftIcon, BellIcon, Settings2Icon, Share2Icon } from 'lucide-vue-next';
-import store from '../store';
 
-const isLoading = ref(true);
-const errorMessage = ref('');
-const parsedDetections = ref([]);
-const imageUrl = ref('');
-const imageBase64 = ref('');
-const route = useRoute();
+// props 정의
+const props = defineProps({
+  detections: {
+    type: String, // JSON 문자열로 전달됨
+    required: true,
+  },
+  imageUrl: {
+    type: String,
+    required: true,
+  },
+});
+
+// 라우터 인스턴스
 const router = useRouter();
 
-// Define the missing variables
+// 로딩 상태
+const isLoading = ref(true);
+
+// 에러 메시지
+const errorMessage = ref('');
+
+// parsedDetections을 ref로 선언
+const parsedDetections = ref([]);
+
+// 포토카드 모달 제어
 const showModal = ref(false);
+
+// 포토카드 엘리먼트 참조
 const photocard = ref(null);
-const popupImageUrl = ref('');
-const isImagePopupVisible = ref(false);
 
-const fetchDetections = async () => {
-  isLoading.value = true;
-  try {
-    const token = localStorage.getItem('token');
-    if (token && route.query.imageUrl) {
-      const response = await axios.get('/backend/get-detections', {
-        params: {
-          imageUrl: route.query.imageUrl,
-        },
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      parsedDetections.value = response.data.detections;
-      imageUrl.value = response.data.imageUrl;
-    } else {
-      parsedDetections.value = JSON.parse(decodeURIComponent(route.query.detections));
-      imageBase64.value = route.query.imageBase64;
+// watch를 통해 props.detections을 파싱하고 에러 처리
+watch(
+  () => props.detections,
+  (newVal) => {
+    console.log('Received detections:', newVal); // 추가된 로그
+    try {
+      // detections을 디코딩하여 파싱
+      const decodedVal = decodeURIComponent(newVal);
+      console.log('Decoded detections:', decodedVal); // 디코딩된 값 확인
+      const detections = JSON.parse(decodedVal);
+      console.log('Parsed detections:', detections); // 파싱된 값 확인
+      parsedDetections.value = detections;
+      errorMessage.value = '';
+    } catch (e) {
+      console.error('Failed to parse detections:', e);
+      errorMessage.value = '예측 결과를 불러오는 데 실패했습니다.';
+      parsedDetections.value = [];
+    } finally {
+      isLoading.value = false;
     }
-    errorMessage.value = '';
-  } catch (e) {
-    console.error('Failed to fetch detections:', e);
-    errorMessage.value = '예측 결과를 불러오는 데 실패했습니다.';
-    parsedDetections.value = [];
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-onMounted(() => {
-  fetchDetections();
-});
-
-watch(route, () => {
-  fetchDetections();
-});
+  },
+  { immediate: true }
+);
 
 // 신뢰도에 따른 색상 클래스 반환
 const getConfidenceColor = (confidence) => {
@@ -205,49 +189,25 @@ const closeModal = () => {
 // 포토카드 다운로드
 const downloadPhotocard = () => {
   if (photocard.value) {
-    html2canvas(photocard.value, { useCORS: true, scale: 2 }).then((canvas) => {
+    html2canvas(photocard.value).then((canvas) => {
       const link = document.createElement('a');
       link.download = 'photocard.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL();
       link.click();
     });
   }
 };
 
-// 이미지 팝업 열기
-function openImagePopup(imageUrl) {
-  popupImageUrl.value = `${BACKEND_BASE_URL}/uploads/${imageUrl}`; // Updated to include BACKEND_BASE_URL
-  isImagePopupVisible.value = true;
-}
-
-// 내가 잡은 물고기 페이지로 이동
-function navigateToCatches() {
-  router.push('/catches');
-}
-
-// Define backend base URL
-const BACKEND_BASE_URL = 'http://localhost:5000';
-
 // 뒤로 가기 기능 구현
 const goBack = () => {
   router.back();
 };
-
-const imageSource = computed(() => {
-  if (imageUrl.value && store.state.isAuthenticated) {
-    return `${BACKEND_BASE_URL}/uploads/${imageUrl.value}`; // Updated to backend URL
-  } else if (imageBase64.value) {
-    return `data:image/jpeg;base64,${imageBase64.value}`;
-  }
-  return '/placeholder.svg';
-});
 </script>
 
 <style scoped>
 .uploaded-image img {
   max-width: 100%;
   height: auto;
-
   object-fit: cover;
 }
 
@@ -257,10 +217,5 @@ const imageSource = computed(() => {
 
 .absolute {
   position: absolute;
-}
-
-/* Ensure pop-up images are displayed correctly */
-.object-contain {
-  object-fit: contain;
 }
 </style>

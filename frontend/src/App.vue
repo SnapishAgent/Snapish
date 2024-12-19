@@ -3,11 +3,11 @@
     <div class="w-full max-w-md bg-white shadow-lg relative">
       <!-- 상단 헤더 -->
       <Header v-if="!hideHeader" class="fixed top-0 left-0 right-0 z-10 max-w-md mx-auto" />
-      <div class="pt-14 pb-14">
+      <div class="pt-16 pb-16">
         <router-view></router-view>
       </div>
       <!-- 하단 네비게이션 -->
-      <BottomNavigation @toggleCameraActions="handleToggleCameraActions"
+      <BottomNavigation @toggleCameraActions="showCameraActions = true"
         class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-10" />
     </div>
   </div>
@@ -18,43 +18,32 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import BottomNavigation from './components/layout/BottomNavigation.vue';
 import Header from './components/layout/Header.vue';
-import store from './store'; // Import the store
 
 // 현재 라우트 확인
 const route = useRoute();
 
 // 특정 경로에서만 헤더 숨기기
 const hideHeader = computed(() => /^\/(fish-result)/.test(route.path));
-
-const handleToggleCameraActions = () => {
-  // This function can be used to trigger image upload actions based on auth
-  // For example, you might open different modals or handle differently
-  if (store.state.isAuthenticated) {
-    // Handle authenticated user actions
-  } else {
-    // Handle unauthenticated user actions
-  }
-};
-
 </script>
 
 <style>
 body {
-  /* ...existing styles... */
+  /* eslint-disable-next-line */
+  @apply antialiased text-gray-900 bg-gray-100;
 }
 
 .active-link {
   color: #1d4ed8;
-  /* ...existing styles... */
+  /* 선호하는 활성화 색상으로 변경 */
 }
 
 .pt-16 {
   padding-top: 4rem;
-  /* ...existing styles... */
+  /* Adjust according to the height of your header */
 }
 
 .pb-16 {
   padding-bottom: 4rem;
-  /* ...existing styles... */
+  /* Adjust according to the height of your bottom navigation */
 }
 </style>

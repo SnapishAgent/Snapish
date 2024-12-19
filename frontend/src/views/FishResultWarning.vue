@@ -83,12 +83,6 @@
       </main>
     </div>
   </div>
-
-  <div>
-    <h1>경고</h1>
-    <img :src="imageSource" alt="Warning" />
-    <p>{{ warningMessage }}</p>
-  </div>
 </template>
 
 <script setup>
@@ -102,33 +96,6 @@ import {
   InfoIcon,         // 정보 아이콘
   Share2Icon,       // 공유 아이콘
 } from 'lucide-vue-next'
-
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import store from '../store';
-
-const route = useRoute();
-
-const imageUrl = route.query.imageUrl;
-const imageBase64 = route.query.imageBase64;
-const detections = computed(() => JSON.parse(decodeURIComponent(route.query.detections || '[]')));
-
-const imageSource = computed(() => {
-  if (imageUrl && store.state.isAuthenticated) {
-    return `data:image/jpeg;base64,${imageUrl}`;
-  } else if (imageBase64) {
-    return `data:image/jpeg;base64,${imageBase64}`;
-  }
-  return '/placeholder.svg';
-});
-
-const warningMessage = computed(() => {
-  const prohibited = detections.value.filter(d => d.label === 'ProhibitedFishLabel'); // Replace with actual label
-  if (prohibited.length > 0) {
-    return '금지된 어종이 검출되었습니다.';
-  }
-  return '경고 사항이 없습니다.';
-});
 </script>
 
 <style scoped>

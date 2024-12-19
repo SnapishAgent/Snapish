@@ -1,55 +1,65 @@
+<!-- filepath: /c:/Users/twoimo/Documents/GitHub/Snapish/frontend/src/components/layout/BottomNavigation.vue -->
 <template>
-  <div :class="['fixed bottom-0 left-0 right-0 max-w-md mx-auto z-10', $attrs.class]">
-    <nav class="bg-white border-t px-6 py-2">
-      <div class="flex justify-between items-center">
-        <!-- 메인 화면 링크 -->
-        <router-link to="/" class="flex flex-col items-center p-2" active-class="active-link">
-          <HomeIcon class="w-6 h-6" />
-          <span class="text-xs mt-1">메인 화면</span>
-        </router-link>
+  <!-- 하단 네비게이션 바 -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-2 max-w-md mx-auto">
+    <div class="flex justify-between items-center">
+      <!-- 메인 화면 링크 -->
+      <router-link to="/" class="flex flex-col items-center p-2" active-class="active-link">
+        <HomeIcon class="w-6 h-6" />
+        <span class="text-xs mt-1">메인 화면</span>
+      </router-link>
 
-        <!-- 사진 찍기 버튼 -->
-        <button @click="openCameraActions" class="flex flex-col items-center p-2">
-          <CameraIcon class="w-6 h-6" />
-          <span class="text-xs mt-1">사진 찍기</span>
-        </button>
+      <!-- 사진 찍기 버튼 -->
+      <button @click="openCameraActions" class="flex flex-col items-center p-2">
+        <CameraIcon class="w-6 h-6" />
+        <span class="text-xs mt-1">사진 찍기</span>
+      </button>
 
-        <!-- 프로필 링크 -->
-        <router-link to="/profile" class="flex flex-col items-center p-2" active-class="active-link">
-          <UserIcon class="w-6 h-6" />
-          <span class="text-xs mt-1">프로필</span>
-        </router-link>
-      </div>
-    </nav>
+      <!-- 프로필 링크 -->
+      <router-link to="/profile" class="flex flex-col items-center p-2" active-class="active-link">
+        <UserIcon class="w-6 h-6" />
+        <span class="text-xs mt-1">프로필</span>
+      </router-link>
+    </div>
+  </nav>
 
-    <!-- CameraActionSheet 컴포넌트 -->
-    <CameraActionSheet :isOpen="showCameraActions" @close="closeCameraActions" />
-  </div>
+  <!-- CameraActionSheet 컴포넌트 -->
+  <CameraActionSheet :isOpen="showCameraActions" @close="closeCameraActions" />
 </template>
 
-<script setup>
+<script>
 import { ref } from 'vue';
 import { HomeIcon, CameraIcon, UserIcon } from 'lucide-vue-next';
 import CameraActionSheet from '../CameraActionSheet.vue';
-import store from '../../store';
 
-const emit = defineEmits(['toggleCameraActions']);
+export default {
+  name: 'BottomNavigation',
+  components: {
+    HomeIcon,
+    CameraIcon,
+    UserIcon,
+    CameraActionSheet
+  },
+  setup() {
+    // 카메라 액션 시트 표시 여부를 관리하는 상태
+    const showCameraActions = ref(false);
 
-const showCameraActions = ref(false);
+    // 카메라 액션 시트를 여는 함수
+    const openCameraActions = () => {
+      showCameraActions.value = true;
+    };
 
-const openCameraActions = () => {
-  showCameraActions.value = true;
-  emit('toggleCameraActions');
+    // 카메라 액션 시트를 닫는 함수
+    const closeCameraActions = () => {
+      showCameraActions.value = false;
+    };
 
-  if (store.state.isAuthenticated) {
-    // Additional actions for authenticated users if needed
-  } else {
-    // Additional actions for unauthenticated users if needed
+    return {
+      showCameraActions,
+      openCameraActions,
+      closeCameraActions
+    };
   }
-};
-
-const closeCameraActions = () => {
-  showCameraActions.value = false;
 };
 </script>
 
