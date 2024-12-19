@@ -17,4 +17,6 @@ dependencies:
   - pillow
   - python-dotenv
   - korean_lunar_calendar
+  - pymysql
+  - PyJWT
 prefix: /opt/anaconda3/envs/snapish

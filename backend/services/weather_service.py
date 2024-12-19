@@ -5,6 +5,10 @@ import os
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
 WEATHER_API_BASE_URL = 'http://api.weatherapi.com/v1/current.json'
 
+# 환경변수에서 WEATHER_API_KEY를 가져옵니다.
+KHOA_API_KEY = os.getenv('KHOA_API_KEY')
+KHOA_API_BASE_URL = 'http://api.weatherapi.com/v1/current.json'
+
 def get_weather_by_coordinates(lat, lon):
     """
     Get Current Weather info by using latitude & longitude

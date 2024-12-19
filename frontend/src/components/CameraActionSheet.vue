@@ -1,4 +1,3 @@
-<!-- filepath: /c:/Users/twoimo/Documents/GitHub/Snapish/frontend/src/components/CameraActionSheet.vue -->
 <template>
     <!-- 액션 시트 모달 -->
     <div v-if="props.isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-20"
@@ -32,11 +31,12 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue';
-import axios from 'axios';
+import { ref } from 'vue';
+import axios from '../axios'; // Ensure this is the correct path to your Axios instance
 import { useRouter } from 'vue-router';
+import store from '../store'; // Vuex store 임포트
 
-// Props 정의
+// eslint-disable-next-line no-undef
 const props = defineProps({
     isOpen: {
         type: Boolean,
@@ -44,7 +44,7 @@ const props = defineProps({
     },
 });
 
-// Emits 정의
+// eslint-disable-next-line no-undef
 const emit = defineEmits(['close']);
 
 // Router 인스턴스
@@ -97,28 +97,75 @@ const handleOption = (action) => {
 const onFileChange = async (event) => {
     const file = event.target.files[0];
     if (file) {
-        const imageUrl = URL.createObjectURL(file);
-        const formData = new FormData();
-        formData.append('image', file);
+        const token = localStorage.getItem('token');
+        if (token) {
+            // ...existing code to send image as FormData with token...
+            const formData = new FormData();
+            formData.append('image', file);
 
-        try {
-            const response = await axios.post('http://localhost:5000/backend/predict', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            const detections = response.data.detections;
+            try {
+                const response = await axios.post('/backend/predict', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    withCredentials: true,
+                });
+                handlePredictResponse(response.data);
+            } catch (error) {
+                console.error('Error during Axios POST:', error);
+                alert('이미지 업로드 중 오류가 발생했습니다.');
+            }
+        } else {
+            // Read file as base64 and send it
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const image_base64 = reader.result.split(',')[1]; // Remove data:image/*;base64,
+                try {
+                    const response = await axios.post('/backend/predict', {
+                        image_base64,
+                    });
+                    handlePredictResponse(response.data);
+                } catch (error) {
+                    console.error('Error during Axios POST:', error);
+                    alert('이미지 업로드 중 오류가 발생했습니다.');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+};
 
-            // detections을 JSON 문자열로 변환 후 URL 인코딩
+const handlePredictResponse = async (data) => {
+    const detections = data.detections;
+    const imageUrl = data.imageUrl || null;
+    const imageBase64 = data.image_base64 || null;
+
+    if (detections && detections.length > 0) {
+        if (store.state.isAuthenticated) { // Use store.state.isAuthenticated
+            await store.dispatch('fetchCatches');
             router.push({
                 name: 'FishResultNormal',
                 query: {
-                    detections: JSON.stringify(detections),
                     imageUrl,
+                    imageBase64,
+                    detections: encodeURIComponent(JSON.stringify(detections)),
+                    timestamp: Date.now() // Add a timestamp to ensure the route updates
                 },
             });
-        } catch (error) {
-            console.error('Error during Axios POST:', error);
-            alert('이미지 업로드 중 오류가 발생했습니다.');
+        } else {
+            // For unauthenticated users, handle without storing to DB
+            router.push({
+                name: 'FishResultNormal',
+                query: {
+                    imageBase64,
+                    detections: encodeURIComponent(JSON.stringify(detections)),
+                    timestamp: Date.now() // Add a timestamp to ensure the route updates
+                },
+            });
         }
+    } else {
+        alert('알 수 없는 물고기입니다.');
     }
 };
 </script>
