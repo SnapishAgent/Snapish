@@ -2,8 +2,15 @@
     <div class="min-h-screen bg-gray-100 flex justify-center">
         <div class="w-full max-w-4xl bg-white shadow-lg">
             <main class="p-4">
-                <div v-if="displayedCatches.length > 0" class="grid grid-cols-2 gap-4">
-                    <div v-for="(catchItem) in displayedCatches" :key="catchItem.id"
+                <div class="mb-4 flex items-center">
+                    <input type="text" v-model="searchQuery" placeholder="물고기 검색..." class="border p-2 w-full rounded" />
+                    <select v-model="sortOption" class="border p-2 ml-2 rounded">
+                        <option value="latest">최신순</option>
+                        <option value="oldest">오래된순</option>
+                    </select>
+                </div>
+                <div v-if="filteredCatches.length > 0" class="grid grid-cols-2 gap-4">
+                    <div v-for="(catchItem) in filteredCatches" :key="catchItem.id"
                         class="bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
                         <img :src="`${BACKEND_BASE_URL}/uploads/${catchItem.imageUrl}`" alt="Catch Image"
                             class="w-full h-32 object-cover rounded-lg mb-2 cursor-pointer border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300"
@@ -76,7 +83,7 @@ import { Edit, Trash } from 'lucide-vue-next';
 
 const store = useStore();
 const catches = computed(() => store.getters.catches);
-const loading = ref(false);
+const loading = ref(true);
 const isEditPopupVisible = ref(false);
 const selectedCatch = ref(null);
 const displayedCatches = ref([]);
@@ -94,21 +101,35 @@ const itemsToLoad = 8;
 const loadMoreTrigger = ref(null);
 const isImagePopupVisible = ref(false);
 const popupImageUrl = ref('');
+const searchQuery = ref('');
+const sortOption = ref('latest');
+
+const filteredCatches = computed(() => {
+    const catchesFiltered = displayedCatches.value.filter(catchItem => {
+        return catchItem.detections[0].label.toLowerCase().includes(searchQuery.value.toLowerCase());
+    });
+
+    if (sortOption.value === 'latest') {
+        return catchesFiltered.sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
+    } else {
+        return catchesFiltered.sort((a, b) => new Date(a.catch_date) - new Date(b.catch_date));
+    }
+});
 
 // Define backend base URL
 const BACKEND_BASE_URL = 'http://localhost:5000';
 
 onMounted(() => {
     if (store.getters.isAuthenticated) {
-        if (!store.state.catches) {
-            store.dispatch('fetchCatches').then(() => {
-                const sortedCatches = catches.value.slice().sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
-                displayedCatches.value = sortedCatches.slice(0, itemsToLoad);
-            });
-        } else {
-            const sortedCatches = catches.value.slice().sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
-            displayedCatches.value = sortedCatches.slice(0, itemsToLoad);
-        }
+        store.dispatch('fetchCatches').then(() => {
+            const sortedCatches = store.getters.catches.slice().sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
+            displayedCatches.value = sortedCatches;
+            loading.value = false;
+        }).catch(() => {
+            loading.value = false;
+        });
+    } else {
+        loading.value = false;
     }
 
     const observer = new IntersectionObserver((entries) => {

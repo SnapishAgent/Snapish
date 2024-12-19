@@ -26,9 +26,6 @@ from sqlalchemy import (
     Text,
     DECIMAL,
     JSON,
-    Float,
-    VARCHAR,
-    UniqueConstraint
 )
 from sqlalchemy.orm import relationship, sessionmaker, scoped_session, declarative_base
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -227,6 +224,25 @@ class TournamentParticipant(Base):
     tournament = relationship('Tournament', back_populates='participants')
     user = relationship('User', back_populates='tournament_participants')
     catch = relationship('Catch', back_populates='tournament_participants')
+    
+# 낚시터 db 컬럼
+class FishingPlace(Base):
+    __tablename__ = 'FishingPlace'
+
+    fishing_place_id = Column(Integer, primary_key=True, autoincrement=True)  # 고유 식별자
+    name = Column(String(255), nullable=False)  # 낚시터명
+    type = Column(String(100), nullable=True)  # 낚시터 유형
+    address_road = Column(String(255), nullable=True)  # 소재지 도로명 주소
+    address_land = Column(String(255), nullable=True)  # 소재지 지번 주소
+    latitude = Column(Float, nullable=True)  # WGS84 위도
+    longitude = Column(Float, nullable=True)  # WGS84 경도
+    phone_number = Column(String(50), nullable=True)  # 낚시터 전화번호
+    main_fish_species = Column(Text, nullable=True)  # 주요 어종
+    usage_fee = Column(String(100), nullable=True)  # 이용 요금
+    safety_facilities = Column(Text, nullable=True)  # 안전 시설 현황
+    convenience_facilities = Column(Text, nullable=True)  # 편익 시설 현황
+
+
 
 # Add the Ranking class
 class Ranking(Base):

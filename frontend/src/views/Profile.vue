@@ -139,6 +139,7 @@ onMounted(() => {
 
 const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('avatar');
     store.dispatch('logout');
     router.push('/login');
 };
