@@ -110,9 +110,9 @@ const filteredCatches = computed(() => {
     });
 
     if (sortOption.value === 'latest') {
-        return catchesFiltered.sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
+        return catchesFiltered.sort((a, b) => b.id - a.id);
     } else {
-        return catchesFiltered.sort((a, b) => new Date(a.catch_date) - new Date(b.catch_date));
+        return catchesFiltered.sort((a, b) => a.id - b.id);
     }
 });
 
@@ -120,9 +120,10 @@ const filteredCatches = computed(() => {
 const BACKEND_BASE_URL = 'http://localhost:5000';
 
 onMounted(() => {
+    // 데이터 로드
     if (store.getters.isAuthenticated) {
         store.dispatch('fetchCatches').then(() => {
-            const sortedCatches = store.getters.catches.slice().sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
+            const sortedCatches = store.getters.catches.slice().sort((a, b) => b.id - a.id);
             displayedCatches.value = sortedCatches;
             loading.value = false;
         }).catch(() => {
@@ -151,11 +152,11 @@ function loadMoreCatches() {
     loading.value = true;
     setTimeout(() => {
         const currentLength = displayedCatches.value.length;
-        const sortedCatches = catches.value.slice().sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
+        const sortedCatches = catches.value.slice().sort((a, b) => b.id - a.id);
         const moreCatches = sortedCatches.slice(currentLength, currentLength + itemsToLoad);
         displayedCatches.value = [...displayedCatches.value, ...moreCatches];
         loading.value = false;
-    }, 1000); // Simulate loading delay
+    }, 1000);
 }
 
 function openEditPopup(catchItem) {

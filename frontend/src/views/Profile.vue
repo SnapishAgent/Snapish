@@ -124,16 +124,10 @@ const services = computed(() => {
 
 const isAuthenticated = computed(() => store.getters.isAuthenticated);
 
-onMounted(() => {
-    if (!store.state.catches) {
-        store.dispatch("fetchCatches"); // Fetch catches when the component is mounted
-    }
+onMounted(async () => {
     if (isAuthenticated.value) {
-        store.dispatch('fetchCatches');
-    }
-    const savedAvatar = localStorage.getItem('avatar');
-    if (savedAvatar) {
-        store.dispatch('updateAvatar', savedAvatar); // Load avatar URL from local storage
+        await store.dispatch('fetchUserProfile');
+        await store.dispatch('fetchCatches');
     }
 });
 
@@ -162,31 +156,21 @@ const uploadAvatar = async (event) => {
         const formData = new FormData();
         formData.append('avatar', file);
         try {
-            const response = await axios.post('http://localhost:5000/profile/avatar', formData, { // Ensure this URL is correct
+            const response = await axios.post('http://localhost:5000/profile/avatar', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
             });
 
-            // Check if response is JSON
-            if (response.headers['content-type'].includes('application/json')) {
-                const avatarUrl = response.data.avatarUrl;
-                store.dispatch('updateAvatar', avatarUrl);
-                localStorage.setItem('avatar', avatarUrl); // Save avatar URL to local storage
+            if (response.data.avatarUrl) {
+                // 프로필 정보 다시 불러오기
+                await store.dispatch('fetchUserProfile');
                 alert('아바타가 성공적으로 업데이트되었습니다.');
-            } else {
-                console.error('Invalid response format:', response);
-                alert('서버 응답이 올바르지 않습니다.');
             }
         } catch (error) {
-            if (error.response) {
-                console.error('Error response:', error.response);
-                alert(`Error: ${error.response.status} - ${error.response.statusText}`);
-            } else {
-                console.error('Error uploading avatar:', error);
-                alert('아바타 업로드에 실패했습니다.');
-            }
+            console.error('Error uploading avatar:', error);
+            alert('아바타 업로드에 실패했습니다.');
         }
     }
 };
