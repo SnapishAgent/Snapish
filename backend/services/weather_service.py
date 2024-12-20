@@ -3,10 +3,9 @@ from datetime import datetime
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# 환경변수에서 WEATHER_API_KEY를 가져옵니다.
-WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
+# API 키와 base URL 설정
 KHOA_API_KEY = os.getenv('KHOA_API_KEY')
-WEATHER_API_BASE_URL = 'http://api.weatherapi.com/v1/current.json'
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')  # API 키를 환경변수로 관리
 
 def get_sea_weather_by_seapostid(obs_data):
     current_date = datetime.now().strftime('%Y%m%d')
@@ -66,22 +65,54 @@ def get_weather_by_coordinates(lat, lon):
     Get Current Weather info by using latitude & longitude
     """
     try:
-        # 날씨 API 호출
-        weather_url = f"{WEATHER_API_BASE_URL}"
+        # OpenWeather API 파라미터 설정
         params = {
-            "key": WEATHER_API_KEY,
-            "q": f"{lat},{lon}",
-            "lang": "ko"
+            "lat": lat,
+            "lon": lon,
+            "appid": OPENWEATHER_API_KEY,
+            "lang": "kr",
+            "units": "metric"
         }
-        response = requests.get(weather_url, params=params)
-        data = response.json()
-
-        if 'error' in data:
-            raise ValueError(data['error']['message'])
         
-        # 날씨 데이터 가공
-        weather_data = data
-        return weather_data
+        
+        OPENWEATHER_API_BASE_URL = 'https://api.openweathermap.org/data/2.5/weather'
+        
+        response = requests.get(OPENWEATHER_API_BASE_URL, params=params)
+        data = response.json()
+        
+        if response.status_code != 200:
+            raise ValueError(data.get('message', 'Unknown error occurred'))
+        
+        try:
+            return process_weather_data(data)
+        except Exception as e:
+            raise Exception(f"Error Preprocessing weather data: {str(e)}")
 
     except Exception as e:
         raise Exception(f"Error fetching weather data: {str(e)}")
+    
+    
+def get_wind_direction(degrees):
+    """Convert wind degrees to cardinal direction"""
+    directions = [
+        "북", "북북동", "북동", "동북동", "동", "동남동", "남동", "남남동",
+        "남", "남남서", "남서", "서남서", "서", "서북서", "북서", "북북서"
+    ]
+    index = round(degrees / (360 / len(directions))) % len(directions)
+    return directions[index]
+
+def process_weather_data(data):
+    return {
+        "weather" :{
+            "temp": data['main']['temp'],
+            "temp_min": data['main']['temp_min'],
+            "temp_max": data['main']['temp_max'],
+            "humidity": data['main']['humidity'],
+            "pressure": data['main']['pressure'],
+            "wind_speed": data['wind']['speed'],
+            "wind_deg": get_wind_direction(data['wind']['deg']),
+            "weather": data['weather'][0]['description'],
+            "sunrise": datetime.fromtimestamp(data['sys']['sunrise']).strftime('%H:%M:%S'),
+            "sunset": datetime.fromtimestamp(data['sys']['sunset']).strftime('%H:%M:%S')
+            }
+    }

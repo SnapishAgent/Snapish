@@ -29,8 +29,7 @@ from sqlalchemy import (
     JSON,
     Float,
     VARCHAR,
-    text,
-    UniqueConstraint
+    text
 )
 from sqlalchemy.orm import relationship, sessionmaker, scoped_session, declarative_base
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -835,23 +834,29 @@ def get_closest_sealoc():
 
     session = Session()
     
-    # ST_Distance_Sphere를 사용하여 MySQL에서 직접 거리 계산
+    ## ST_Distance_Sphere를 사용하여 MySQL에서 직접 거리 계산
+    # 조위, 수온, 기온 , 기압 4개 모두 체크 가능한 경우
     query_obsrecent = text("""
         SELECT obs_station_id, obs_post_id, obs_post_name,
             ST_Distance_Sphere(POINT(:lon, :lat), POINT(obs_lon, obs_lat)) AS distance
         FROM TidalObservations
         WHERE obs_object LIKE '%조위%'
+            AND obs_object LIKE '%수온%'
+            AND obs_object LIKE '%기온%'
+            AND obs_object LIKE '%기압%'
         ORDER BY distance ASC
-        LIMIT 1
+        LIMIT 1;
     """)
     
+    # 조수간만 태그 + 없음 제거
     query_obspretab = text("""
         SELECT obs_station_id, obs_post_id, obs_post_name,
             ST_Distance_Sphere(POINT(:lon, :lat), POINT(obs_lon, obs_lat)) AS distance
         FROM TidalObservations
         WHERE obs_object LIKE '%조수간만%'
+            AND obs_object NOT LIKE '%없음%'
         ORDER BY distance ASC
-        LIMIT 1
+        LIMIT 1;
     """)
 
     try:
@@ -906,6 +911,35 @@ def get_closest_sealoc():
 
     finally:
         session.close()
+        
+@app.route('/backend/get-weather', methods=['POST'])
+def get_weather_api():
+    try:
+        # Get and validate coordinates
+        lat = request.form.get('lat')
+        lon = request.form.get('lon')
+        
+        if not lat or not lon:
+            return jsonify({'error': 'Latitude and longitude are required'}), 400
+        
+        print(f"lat : {lat}, lon : {lon}")
+            
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except ValueError:
+            return jsonify({'error': 'Invalid coordinate format'}), 400
+        
+        # Get weather data
+        weather_data = get_weather_by_coordinates(lat, lon)
+        if not weather_data:
+            return jsonify({'error': 'Failed to fetch weather data'}), 500
+            
+        return jsonify(weather_data)
+        
+    except Exception as e:
+        logging.error(f"Error in get_weather_api: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 # 애플리케이션 종료 시 세션 제거
 @app.teardown_appcontext
