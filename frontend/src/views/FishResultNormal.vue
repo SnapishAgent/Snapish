@@ -3,7 +3,7 @@
   <div class="min-h-screen bg-white flex flex-col">
     <!-- 헤더 -->
     <header
-      class="fixed top-0 left-0 right-0 bg-white px-4 py-3 flex items-center justify-between border-b z-15 max-w-md mx-auto">
+      class="fixed top-0 left-0 right-0 bg-white px-4 py-3 flex items-center justify-between border-b z-10 max-w-md mx-auto">
       <div class="flex items-center">
         <button class="mr-2" @click="goBack" :disabled="isLoading">
           <ChevronLeftIcon class="w-6 h-6" />
@@ -113,7 +113,7 @@
         </button>
       </div>
 
-      <!-- ��가 잡은 물고기 페이지로 이동 버튼 -->
+      <!-- 내가 잡은 물고기 페이지로 이동 버튼 -->
       <div v-if="!isLoading && !errorMessage" class="mt-4">
         <button class="w-full bg-blue-500 text-white py-3 px-4 rounded-lg flex items-center justify-center"
           @click="navigateToCatches" :disabled="isLoading">
@@ -124,7 +124,7 @@
     </main>
 
     <!-- 포토카드 모달 -->
-    <div v-if="showModal && !isLoading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div v-if="showModal && !isLoading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[60] max-w-md mx-auto">
       <div class="bg-white rounded-lg shadow-lg p-6 w-10/12 max-w-sm">
         <h2 class="text-lg font-bold mb-4 text-center">나만의 포토카드</h2>
         <div ref="photocard" class="bg-gray-100 p-4 rounded-lg overflow-auto">
@@ -140,7 +140,7 @@
     </div>
 
     <!-- 이미지 팝업 -->
-    <div v-if="isImagePopupVisible && !isLoading" class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-30"
+    <div v-if="isImagePopupVisible && !isLoading" class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-[50] max-w-md mx-auto"
       @click="isImagePopupVisible = false">
       <div class="relative max-w-full max-h-full" @click.stop>
         <img :src="popupImageUrl" alt="Popup Image"

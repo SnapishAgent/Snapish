@@ -1,6 +1,6 @@
 <template>
     <!-- 액션 시트 모달 -->
-    <div v-if="props.isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-20"
+    <div v-if="props.isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[100]"
         @click="closeActionSheet">
         <!-- 모달 콘텐츠 -->
         <div class="bg-white w-full max-w-sm rounded-t-xl" @click.stop>
@@ -145,7 +145,7 @@ const handlePredictResponse = async (data) => {
         const currentDate = new Date();
         const currentMonthDay = `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}.${currentDate.getDate().toString().padStart(2, '0')}`;
 
-        console.log('현재 날짜:', currentMonthDay); // 현재 날짜 확인
+        console.log('현재 날���:', currentMonthDay); // 현재 날짜 확인
 
         const isProhibited = detections.some(detection => {
             const prohibitedDates = detection.prohibited_dates; // 금어기 날짜 가져오기
@@ -227,7 +227,7 @@ const handlePredictResponse = async (data) => {
 .border-b {
     /* 하단 경계선 */
     border-bottom: 1px solid #e5e7eb;
-    /* Tailwind의 gray-200 */
+    /* Tailwind�� gray-200 */
 }
 
 .last\:border-b-0 {
