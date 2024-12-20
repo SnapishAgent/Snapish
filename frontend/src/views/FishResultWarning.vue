@@ -31,12 +31,12 @@
 
         <!-- 업로드된 물고기 이미지 표시 -->
         <div v-if="!isLoading && !errorMessage" class="mt-4 bg-gray-200 rounded-lg p-4">
-          <div class="relative w-full">
+          <div class="relative w-full aspect-[4/3] bg-gray-100">
             <img 
               ref="fishImage" 
               :src="imageSource" 
               alt="물고기 사진" 
-              class="w-full object-contain cursor-pointer"
+              class="absolute inset-0 w-full h-full object-contain cursor-pointer"
               @click="handleImageClick" 
               @load="onImageLoad" 
             />
@@ -273,6 +273,12 @@ const onImageLoad = () => {
 };
 
 const getBoundingBoxStyle = (bbox) => {
+  // Handle case where bbox is not an array
+  if (!Array.isArray(bbox)) {
+    console.warn('Invalid bbox format:', bbox);
+    return {};
+  }
+
   const [x1, y1, x2, y2] = bbox;
   const imageElement = fishImage.value;
 
@@ -322,15 +328,36 @@ const getConfidenceColor = (confidence) => {
   position: absolute;
 }
 
-/* Ensure pop-up images are displayed correctly */
 .object-contain {
   object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+
+.relative {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f3f4f6;
+  min-height: 300px;
+}
+
+.absolute.inset-0 {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.aspect-\[4\/3\] {
+  aspect-ratio: 4/3;
 }
 
 header {
   position: fixed;
   top: 0;
-  z-index: 10; /* 헤더가 다른 요소 위에 오도록 설정 */
+  z-index: 10;
 }
 
 .bg-opacity-50 {
@@ -338,6 +365,6 @@ header {
 }
 
 .modal {
-  /* 추가적인 모달 스타일이 필요하다면 여기에 작성 */
+  background: white;
 }
 </style>

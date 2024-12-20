@@ -66,6 +66,9 @@ export default createStore({
         (catchItem) => catchItem.id !== catchId
       );
     },
+    SET_USER(state, userData) {
+      state.user = userData;
+    },
   },
   actions: {
     // Existing actions
@@ -288,6 +291,9 @@ export default createStore({
         .then((data) => {
           commit("setServices", data);
         });
+    },
+    updateUser({ commit }, userData) {
+      commit('SET_USER', userData);
     },
   },
   getters: {

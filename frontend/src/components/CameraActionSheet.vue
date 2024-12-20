@@ -145,7 +145,7 @@ const handlePredictResponse = async (data) => {
         const currentDate = new Date();
         const currentMonthDay = `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}.${currentDate.getDate().toString().padStart(2, '0')}`;
 
-        console.log('현재 날���:', currentMonthDay); // 현재 날짜 확인
+        console.log('현재 날짜:', currentMonthDay); // 현재 날짜 확인
 
         const isProhibited = detections.some(detection => {
             const prohibitedDates = detection.prohibited_dates; // 금어기 날짜 가져오기
@@ -227,7 +227,7 @@ const handlePredictResponse = async (data) => {
 .border-b {
     /* 하단 경계선 */
     border-bottom: 1px solid #e5e7eb;
-    /* Tailwind�� gray-200 */
+    /* Tailwind gray-200 */
 }
 
 .last\:border-b-0 {

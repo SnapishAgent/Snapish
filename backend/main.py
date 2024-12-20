@@ -420,7 +420,7 @@ def signup():
     session.commit()
     session.close()
 
-    return jsonify({'message': '원가입이 성공적으로 완료되었습니다.'}), 201
+    return jsonify({'message': '회원가입이 성공적으로 완료되었습니다.'}), 201
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -562,7 +562,6 @@ def profile(user_id):
             'full_name': current_user.full_name,
             'age': current_user.age,
             'avatar': current_user.avatar,  # Include avatar URL
-            # 필요한 정보 추가
         }
         session.close()
         return jsonify(user_data)
@@ -729,7 +728,11 @@ def delete_catch(user_id, catch_id):
 
 @app.route('/uploads/<path:filename>', methods=['GET'])
 def uploaded_file(filename):
-    return send_from_directory('uploads', filename)
+    response = send_from_directory('uploads', filename)
+    # 캐시 컨트롤 헤더 추가
+    response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1년
+    response.headers['Vary'] = 'Accept-Encoding'
+    return response
 
 @app.route('/backend/get-detections', methods=['GET'])
 @token_required
