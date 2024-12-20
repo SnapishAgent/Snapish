@@ -17,14 +17,30 @@
 
       <!-- 기본 정보 영역 -->
       <section class="info-section p-4">
-        <!-- 주소 섹션 -->
-        <div class="facility-section">
-          <h3 class="flex items-center gap-2 text-lg font-semibold">
-            <MapPinIcon class="w-5 h-5" /> 
-            위치
-          </h3>
+        <!-- 위치 정보 토글 -->
+        <div class="location-toggle">
+          <button @click="toggleLocation" 
+                  class="w-full py-3 flex justify-between items-center">
+            <div>
+              <h3 class="flex items-center gap-2 text-lg font-semibold">
+                <MapPinIcon class="w-5 h-5" /> 
+                위치
+              </h3>
+              <p class="text-sm text-gray-600 mt-1">
+                {{ location.address_road || location.address_land }}
+              </p>
+            </div>
+            <ChevronDownIcon :class="['w-5 h-5 transition-transform', { 'rotate-180': isLocationOpen }]" />
+          </button>
+          
           <div class="facility-content mt-2">
-            {{ location.address_road || location.address_land }}
+            <div v-if="mapLoaded">
+              <MapComponent 
+                v-show="isLocationOpen" 
+                :locations="[location]" 
+                mapType="B" 
+              />
+            </div>
           </div>
         </div>
 
@@ -113,17 +129,41 @@
           </button>
           
           <div v-if="isWeatherOpen">
-            <div>
+            <div v-if="weatherLoaded">
               <MapLocationWeatherLand 
                 :spotlocation="[location.latitude, location.longitude]"
                 v-model:weatherData="weatherData.land"
               />
             </div>
-            <div v-if="location.type === '바다'">
+            <div v-if="weatherLoaded && location.type === '바다'">
               <MapLocationWeatherSea 
                 :spotlocation="[location.latitude, location.longitude]"
                 v-model:weatherData="weatherData.sea"
+                @update:observationInfo="updateObservationInfo"
               />
+              
+              <!-- 관측소 정보 표시 -->
+              <div v-if="observationInfo" class="mt-1">
+                <div class="space-y-1">
+                  <p v-if="observationInfo.tideStation" class="text-xs">
+                    조석예보 기준 관측소: <strong>{{ observationInfo.tideStation }}</strong>
+                    | <strong>{{ observationInfo.tideDistance?.toFixed(3) }} km</strong> 거리
+                  </p>
+                  <p class="text-xs">
+                    실시간 바다 날씨 기준 관측소: <strong>{{ observationInfo.weatherStation }}</strong>
+                    | <strong>{{ observationInfo.weatherDistance?.toFixed(3) }} km</strong> 거리
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- 출처 및 주의사항 -->
+            <div class="mt-2">
+              <p style="font-size: 0.65rem;" class="text-gray-500">
+                출처 : {{ observationInfo ? '바다누리 해양정보 서비스 | ' : '' }}openweathermap.org 
+              </p>
+              <p style="font-size: 0.65rem;" class="text-gray-500">
+                실시간 측정 API 특성상 일부 데이터에 <strong>결측</strong>이 있을 수 있습니다.
+              </p>
             </div>
           </div>
         </div>
@@ -146,12 +186,14 @@ import {
 } from 'lucide-vue-next';
 import MapLocationWeatherSea from './MapLocationWeatherSea.vue';
 import MapLocationWeatherLand from './MapLocationWeatherLand.vue';
+import MapComponent from './MapComponent.vue';
 
 export default {
   name: 'MapLocationDetail',
   components: {
     MapLocationWeatherSea,
     MapLocationWeatherLand,
+    MapComponent,
     XIcon,
     MapPinIcon,
     WalletIcon,
@@ -169,27 +211,49 @@ export default {
   },
   data() {
     return {
+      isLocationOpen: false,
       isFacilitiesOpen: false,
       isWeatherOpen: false,
       weatherData: {
         sea: null,
         land: null
-      }
+      },
+      weatherLoaded: false,
+      mapLoaded: false,
+      observationInfo: null
     }
   },
   methods: {
+    toggleLocation() {
+      this.isLocationOpen = !this.isLocationOpen;
+    },
     toggleFacilities() {
       this.isFacilitiesOpen = !this.isFacilitiesOpen;
     },
     toggleWeather() {
       this.isWeatherOpen = !this.isWeatherOpen;
+    },
+    updateObservationInfo(info) {
+      this.observationInfo = info;
+    }
+  },
+  watch: {
+    isLocationOpen(newValue) {
+      if (newValue && !this.mapLoaded) {
+        this.mapLoaded = true;
+      }
+    },
+    isWeatherOpen(newValue) {
+      if (newValue && !this.weatherLoaded) {
+        this.weatherLoaded = true;
+      }
     }
   }
 }
 </script>
 
 <style scoped>
-/* 기존 스타일 유지 */
+/* 사용되지 않는 스타일 제거 */
 .overflow-y-auto {
   scrollbar-width: thin;
   scrollbar-color: #CBD5E0 transparent;
@@ -208,6 +272,7 @@ export default {
   border-radius: 3px;
 }
 
+/* content-scroll 클래스는 template에서 사용중이므로 유지 */
 .content-scroll {
   flex: 1;
   overflow-y: auto;
@@ -215,16 +280,11 @@ export default {
   padding-bottom: 60px;
 }
 
-/* 토글 관련 스타일 추가 */
+/* 필요한 스타일만 유지 */
 .rotate-180 {
   transform: rotate(180deg);
 }
 
-.facility-toggle, .weather-toggle {
-  transition: all 0.3s ease;
-}
-
-/* 기존 스타일 유지 */
 .facility-section {
   padding-bottom: 0.75rem;
 }

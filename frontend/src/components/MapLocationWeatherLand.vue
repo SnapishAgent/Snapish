@@ -3,19 +3,19 @@
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
-    <div v-else-if="weatherData" class="weather-container">
-      <h3 class="weather-title">현재 날씨 정보</h3>
+    <div v-else-if="localWeather" class="weather-container">
+      <h3>현재 날씨 정보</h3>
       
-      <div v-if="weatherData.weather" class="weather-content">
+      <div v-if="localWeather.weather" class="weather-content">
         <!-- 일출/일몰 정보 -->
         <div class="time-box">
           <div class="time-item">
             <SunriseIcon class="icon" />
-            <span>{{ weatherData.weather.sunrise }}</span>
+            <span>{{ localWeather.weather.sunrise }}</span>
           </div>
           <div class="time-item">
             <SunsetIcon class="icon" />
-            <span>{{ weatherData.weather.sunset }}</span>
+            <span>{{ localWeather.weather.sunset }}</span>
           </div>
         </div>
 
@@ -24,27 +24,27 @@
           <div class="info-item">
             <ThermometerIcon class="icon" />
             <span class="label">기온</span>
-            <span class="value">{{ weatherData.weather.temp }}°C</span>
+            <span class="value">{{ localWeather.weather.temp }} <span class="unit">°C</span></span>
           </div>
           <div class="info-item">
             <DropletIcon class="icon" />
             <span class="label">습도</span>
-            <span class="value">{{ weatherData.weather.humidity }}%</span>
+            <span class="value">{{ localWeather.weather.humidity }} <span class="unit">%</span></span>
           </div>
           <div class="info-item">
             <WindIcon class="icon" />
             <span class="label">풍속</span>
-            <span class="value">{{ weatherData.weather.wind_speed }}m/s</span>
+            <span class="value">{{ localWeather.weather.wind_speed }} <span class="unit">m/s</span></span>
           </div>
           <div class="info-item">
             <CompassIcon class="icon" />
             <span class="label">풍향</span>
-            <span class="value">{{ weatherData.weather.wind_deg }}</span>
+            <span class="value">{{ localWeather.weather.wind_deg }} </span>
           </div>
           <div class="info-item">
             <CloudIcon class="icon" />
             <span class="label">날씨</span>
-            <span class="value">{{ weatherData.weather.weather }}</span>
+            <span class="value">{{ localWeather.weather.weather }}</span>
           </div>
         </div>
       </div>
@@ -82,10 +82,12 @@ export default {
       type: Array,
       required: true,
     },
+    weatherData: Object,
   },
+  emits: ['update:weatherData'],
   data() {
     return {
-      weatherData: null,
+      localWeather: null,
       error: null,
     };
   },
@@ -98,11 +100,17 @@ export default {
   methods: {
     async fetchWeather() {
       if (this.spotlocation && this.spotlocation.length === 2) {
+        if (this.weatherData) {
+          this.localWeather = this.weatherData;
+          return;
+        }
+
         try {
           this.error = null;
-          this.weatherData = null;
           const [lat, lon] = this.spotlocation;
-          this.weatherData = await fetchWeatherByCoordinates(lat, lon);
+          const response = await fetchWeatherByCoordinates(lat, lon);
+          this.localWeather = response;
+          this.$emit('update:weatherData', response);
         } catch (error) {
           console.error('날씨 정보를 가져오는데 실패했습니다:', error);
           this.error = '날씨 정보를 가져오는데 실패했습니다.';
@@ -114,27 +122,34 @@ export default {
 </script>
 
 <style scoped>
-.weather-container {
-  padding: 16px;
+h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
 }
 
-.weather-title {
-  font-size: 1rem;
-  font-weight: 500;
-  margin-bottom: 12px;
+.weather-container {
+  padding: 16px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .weather-content {
   background-color: #f8f9fa;
   border-radius: 8px;
   overflow: hidden;
+  width: 100%;
 }
 
 .time-box {
   display: flex;
   justify-content: space-between;
   padding: 12px 16px;
-  background-color: #f8f9fa;
+  background: linear-gradient(to right, 
+    rgba(255, 236, 179, 0.2), /* 일출: 밝은 노란색 */
+    rgba(255, 148, 148, 0.2)  /* 일몰: 붉은색 */
+  );
   border-bottom: 1px solid #eee;
 }
 
@@ -142,6 +157,9 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: transparent;
 }
 
 .time-item span {
@@ -152,8 +170,8 @@ export default {
 .info-box {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  padding: 12px;
-  gap: 8px;
+  padding: 16px;
+  gap: 12px;
 }
 
 .info-item {
@@ -191,6 +209,10 @@ export default {
   text-align: center;
   color: #666;
   font-size: 0.9rem;
+}
+
+.unit {
+  font-size: 0.7rem;
 }
 </style>
 

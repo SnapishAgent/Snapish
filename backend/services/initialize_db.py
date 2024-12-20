@@ -6,8 +6,8 @@ import json
 
 def insert_tidal_data():
     # 프로젝트 루트 디렉토리를 기준으로 경로 설정
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # main.py의 절대 경로
-    JSON_FILE_PATH = os.path.join(BASE_DIR, "../data/tidal_observations.json")
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend의 절대 경로
+    JSON_FILE_PATH = os.path.join(BASE_DIR, "data", "tidal_observations.json")
 
     # JSON 파일 읽기
     try:
@@ -67,8 +67,8 @@ def insert_tidal_data():
 # 데이터 삽입 함수
 def insert_fishing_place_data():
     # 프로젝트 루트 디렉토리를 기준으로 경로 설정
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # main.py의 절대 경로
-    JSON_FILE_PATH = os.path.join(BASE_DIR, "../data/fishing_place_v1.json")
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend 디렉토리의 절대 경로
+    JSON_FILE_PATH = os.path.join(BASE_DIR, "data", "fishing_place_v1.json")
 
     # JSON 파일 읽기
     try:

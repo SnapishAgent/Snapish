@@ -24,7 +24,7 @@
                 <td :class="{ 'high-tide': item.hl_code === '고조', 'low-tide': item.hl_code === '저조' }">
                   {{ item.hl_code }}
                 </td>
-                <td>{{ item.tph_level }} cm</td>
+                <td>{{ item.tph_level }} <span class="unit">cm</span></td>
               </tr>
             </tbody>
           </table>
@@ -32,50 +32,37 @@
 
         <!-- Real-Time Observations -->
         <div style="flex: 1;">
-          <h3>실시간 날씨 예보</h3>
+          <h3>실시간 바다 날씨</h3>
           <table class="tide-pre-tab">
             <thead>
               <tr>
                 <th colspan="2">
                   {{ obsrecent?.api_response?.record_time?.split(' ')[1]?.slice(0, 5) || '-' }}
+                  기준 측정
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>수온</td>
-                <td>{{ obsrecent?.api_response?.water_temp ?? '-' }}°C</td>
+                <td>{{ obsrecent?.api_response?.water_temp ?? '-' }} <span class="unit">°C</span></td>
               </tr>
               <tr>
                 <td>기온</td>
-                <td>{{ obsrecent?.api_response?.air_temp ?? '-' }}°C</td>
+                <td>{{ obsrecent?.api_response?.air_temp ?? '-' }} <span class="unit">°C</span></td>
               </tr>
               <tr>
                 <td>기압</td>
-                <td>{{ obsrecent?.api_response?.air_press ?? '-' }}hPa</td>
+                <td>{{ obsrecent?.api_response?.air_press ?? '-' }} <span class="unit">hPa</span></td>
               </tr>
               <tr>
                 <td>조위</td>
-                <td>{{ obsrecent?.api_response?.tide_level ?? '-' }}cm</td>
+                <td>{{ obsrecent?.api_response?.tide_level ?? '-' }} <span class="unit">cm</span></td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-      <!-- Location Info -->
-        <div>
-          <p v-if="obspretab?.api_response" style="font-size: 0.8rem;">
-            조석예보 기준 관측소: <strong>{{ obspretab.obs_post_name }}</strong>
-            | <strong>{{ obspretab.distance?.toFixed(3) }} km</strong> 거리
-          </p>
-          <p style="font-size: 0.8rem;">
-            실시간 날씨 예보 기준 관측소: <strong>{{ obsrecent.obs_post_name }}</strong>
-            | <strong>{{ obsrecent.distance?.toFixed(3) }} km</strong> 거리
-          </p>
-          <p style="font-size: 0.7rem;">
-            출처 : 바다누리 해양정보 서비스 | 실시간 특성상 일부 데이터에 <strong>결측</strong>이 있을 수 있습니다.
-          </p>
-        </div>
     </div>
 
     <!-- Error State -->
@@ -96,7 +83,7 @@ export default {
     },
     weatherData: Object,
   },
-  emits: ['update:weatherData'],
+  emits: ['update:weatherData', 'update:observationInfo'],
   data() {
     return {
       obsrecent: null,
@@ -125,6 +112,14 @@ export default {
         this.obsrecent = obsrecent;
         this.obspretab = obspretab;
         this.$emit('update:weatherData', { obsrecent, obspretab });
+        
+        // 관측소 정보 전달
+        this.$emit('update:observationInfo', {
+          tideStation: obspretab?.obs_post_name,
+          tideDistance: obspretab?.distance,
+          weatherStation: obsrecent?.obs_post_name,
+          weatherDistance: obsrecent?.distance
+        });
       } catch (error) {
         console.error('Error fetching weather data:', error);
       } finally {
@@ -145,65 +140,59 @@ export default {
 </script>
 
 <style scoped>
-.data-table {
-  margin: 1rem 0;
-}
-
+/* 중복되는 스타일 통합 */
 .tide-pre-tab {
   width: 100%;
   border-collapse: collapse;
-  font-size: 1rem;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.tide-pre-tab th, .tide-pre-tab td {
-  border: 1px solid #ddd;
-  padding: 8px;
+.tide-pre-tab th, 
+.tide-pre-tab td {
+  padding: 12px;
   text-align: center;
+  border: none;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;  /* td에만 있던 스타일을 통합 */
 }
 
 .tide-pre-tab th {
-  background-color: #f4f4f4;
+  background-color: #f0f0f0;
   font-weight: bold;
-  text-transform: uppercase;
+  color: #333;
 }
 
-.tide-pre-tab tr:nth-child(even) {
-  background-color: #f9f9f9;
+.tide-pre-tab tr {
+  background-color: #f8f8f8;
 }
 
-.tide-pre-tab tr:hover {
-  background-color: #f1f1f1;
+.tide-pre-tab tr:last-child td {
+  border-bottom: none;
 }
 
-.table-container {
-  max-width: 100%;
-  overflow-x: auto;
+/* 나머지 스타일은 그대로 유지 */
+.data-table {
+  margin: 1rem 0;
 }
 
 h3 {
   margin-bottom: 0.5rem;
   font-size: 1.2rem;
   font-weight: bold;
-  color: #333;
-}
-
-p {
-  font-size: 1rem;
-  color: #555;
+  color: #495057;
 }
 
 .high-tide {
-  background-color: #e6f3ff;  /* 파란 배경 */
+  background-color: #e6f3ff;
 }
 
 .low-tide {
-  background-color: #ffe6e6;  /* 붉은 배경 */
+  background-color: #ffe6e6;
 }
 
-.tide-pre-tab th {
-  background-color: #f4f4f4;
-  font-weight: bold;
-  text-align: center;
-  padding: 10px;
+.unit {
+  font-size: 0.7rem;
 }
 </style>

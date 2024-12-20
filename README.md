@@ -8,10 +8,10 @@ sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 
 cd /home/ubuntu/Snapish/backend
 export FLASK_APP=main.py
-sudo nohup flask run --host=0.0.0.0 --port=5000 > /dev/null 2>&1 &
+flask run --host=0.0.0.0
 
 cd /home/ubuntu/Snapish/frontend
-sudo nohup npm run serve > /dev/null 2>&1 &
+sudo npm run serve
 ```
 
 # 백엔드
@@ -35,14 +35,14 @@ pip install -r requirements.txt
 ```bash
 cd /Snapish/backend
 $env:FLASK_APP="main.py"
-sudo nohup flask run --host=0.0.0.0 > /dev/null 2>&1 &
+flask run --host=0.0.0.0 
 ps a
 ```
 리눅스 우분투 또는 MAC는 환경설정을 아래와 같이 진행하세요.
 ```bash
 cd /Snapish/backend
 export FLASK_APP="main.py"
-sudo nohup flask run --host=0.0.0.0 > /dev/null 2>&1 &
+flask run --host=0.0.0.0
 ps a
 ```
 
@@ -58,6 +58,6 @@ npm install
 프론트엔드를 다음과 같이 컴파일하고 실행하세요. (백그라운드 작동)
 ```bash
 cd /Snapish/frontend
-sudo nohup npm run serve > /dev/null 2>&1 &
+npm run serve
 ps a
 ```
