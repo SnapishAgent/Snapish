@@ -62,16 +62,22 @@
             <div class="p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-6">전체 서비스</h2>
                 <div class="grid grid-cols-4 gap-4">
-                    <div v-for="service in services" :key="service.id" class="flex flex-col items-center">
-                        <!-- Changed from service._id -->
+                    <router-link 
+                        v-for="service in services" 
+                        :key="service.id" 
+                        :to="service.route"
+                        class="flex flex-col items-center hover:bg-gray-50 p-2 rounded-lg transition-colors">
                         <template v-if="service.name.includes('서비스')">
                             <Settings class="w-8 h-8 mb-2" />
                         </template>
                         <template v-else>
-                            <img :src="service.icon" alt="Service Icon" class="w-16 h-16 mb-2" />
+                            <component
+                                :is="getServiceIcon(service.name)"
+                                class="w-8 h-8 mb-2 text-gray-600"
+                            />
                         </template>
-                        <span class="text-gray-700">{{ service.name }}</span>
-                    </div>
+                        <span class="text-gray-700 text-sm text-center">{{ service.name }}</span>
+                    </router-link>
                 </div>
             </div>
         </div>
@@ -82,7 +88,15 @@
 import { computed, onMounted, ref } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { Edit, LogOut, Settings } from 'lucide-vue-next';
+import { 
+    Edit, 
+    LogOut, 
+    Settings, 
+    Waves, 
+    Cloud, 
+    BookOpen, 
+    Users 
+} from 'lucide-vue-next';
 import axios from 'axios';
 
 const store = useStore();
@@ -98,51 +112,17 @@ const stats = computed(() => {
         following: originalStats?.following || 0,
     };
 });
-const services = computed(() => {
-    if (!store.state.services) {
-        store.dispatch('fetchServices');
-    }
-    return store.state.services || [
-        { id: 1, icon: '/', name: '서비스 1' },
-        { id: 2, icon: '/', name: '서비스 2' },
-        { id: 3, icon: '/', name: '서비스 3' },
-        { id: 4, icon: '/', name: '서비스 4' },
-        { id: 5, icon: '/', name: '서비스 5' },
-        { id: 6, icon: '/', name: '서비스 6' },
-        { id: 7, icon: '/', name: '서비스 7' },
-        { id: 8, icon: '/', name: '서비스 8' },
-        { id: 9, icon: '/', name: '서비스 9' },
-        { id: 10, icon: '/', name: '서비스 10' },
-        { id: 11, icon: '/', name: '서비스 11' },
-        { id: 12, icon: '/', name: '서비스 12' },
-        { id: 13, icon: '/', name: '서비스 13' },
-        { id: 14, icon: '/', name: '서비스 14' },
-        { id: 15, icon: '/', name: '서비스 15' },
-        { id: 16, icon: '/', name: '서비스 16' },
-    ];
-});
+const services = computed(() => store.getters.services);
 
 const isAuthenticated = computed(() => store.getters.isAuthenticated);
 
 onMounted(async () => {
-    if (!store.state.catches) {
-        await store.dispatch("fetchCatches");
-    }
     if (isAuthenticated.value) {
-        try {
-            const response = await axios.get('http://localhost:5000/profile', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`  // Bearer 추가
-                }
-            });
-            store.dispatch('updateUser', response.data);
-            if (response.data.avatar) {
-                store.dispatch('updateAvatar', response.data.avatar);
-                localStorage.setItem('avatar', response.data.avatar);
-            }
-        } catch (error) {
-            console.error('Error fetching profile:', error);
-        }
+        await Promise.all([
+            store.dispatch('fetchUserProfile'),
+            store.dispatch('fetchCatches'),
+            store.dispatch('fetchServices'),
+        ]);
     }
 });
 
@@ -178,26 +158,27 @@ const uploadAvatar = async (event) => {
                 },
             });
 
-            if (response.headers['content-type'].includes('application/json')) {
-                const avatarUrl = `${response.data.avatarUrl}?t=${Date.now()}`;
-                store.dispatch('updateAvatar', avatarUrl);
-                localStorage.setItem('avatar', avatarUrl);
+            if (response.data.avatarUrl) {
+                await store.dispatch('fetchUserProfile');
                 alert('아바타가 성공적으로 업데이트되었습니다.');
-            } else {
-                console.error('Invalid response format:', response);
-                alert('서버 응답이 올바르지 않습니다.');
             }
         } catch (error) {
-            if (error.response) {
-                console.error('Error response:', error.response);
-                alert(`Error: ${error.response.status} - ${error.response.statusText}`);
-            } else {
-                console.error('Error uploading avatar:', error);
-                alert('아바타 업로드에 실패했습니다.');
-            }
+            console.error('Error uploading avatar:', error);
+            alert('아바타 업로드에 실패했습니다.');
         }
     }
 };
+
+// 서비스 아이콘 매핑 함수
+function getServiceIcon(serviceName) {
+    const iconMap = {
+        '물때 정보': Waves,
+        '날씨 정보': Cloud,
+        '내 기록': BookOpen,
+        '커뮤니티': Users,
+    };
+    return iconMap[serviceName] || Settings;
+}
 </script>
 
 <style scoped>

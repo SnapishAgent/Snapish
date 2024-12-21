@@ -1,245 +1,404 @@
 <template>
-    <div class="min-h-screen bg-gray-100 flex justify-center">
-        <div class="w-full max-w-4xl bg-white shadow-lg">
-            <main class="p-4">
-                <div class="mb-4 flex items-center">
-                    <input type="text" v-model="searchQuery" placeholder="물고기 검색..." class="border p-2 w-full rounded" />
-                    <select v-model="sortOption" class="border p-2 ml-2 rounded">
+    <div class="min-h-screen bg-gray-50">
+        <!-- 상단 검색/필터 영역 -->
+        <div class="sticky top-0 bg-white shadow-sm z-10 px-4 py-3">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-grow">
+                        <input 
+                            type="text" 
+                            v-model="searchQuery" 
+                            placeholder="물고기 검색..." 
+                            class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                        />
+                        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    </div>
+                    <div class="flex gap-2">
+                        <select 
+                            v-model="sortOption" 
+                            class="px-4 py-2 rounded-lg border border-gray-200 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"
+                        >
                         <option value="latest">최신순</option>
                         <option value="oldest">오래된순</option>
                     </select>
-                </div>
-                <div v-if="filteredCatches.length > 0" class="grid grid-cols-2 gap-4">
-                    <div v-for="(catchItem) in filteredCatches" :key="catchItem.id"
-                        class="bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
-                        <img :src="`${BACKEND_BASE_URL}/uploads/${catchItem.imageUrl}`" alt="Catch Image"
-                            class="w-full h-32 object-cover rounded-lg mb-2 cursor-pointer border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300"
-                            @click="openImagePopup(catchItem.imageUrl)" />
-                        <p class="text-gray-800 text-sm text-center flex justify-center items-center">
-                            {{ catchItem.detections[0].label }}
-                            <span v-if="catchItem.detections[0].label" class="ml-2 cursor-pointer"
-                                @click="openEditPopup(catchItem)">
-                                <Edit class="h-4 w-4 text-blue-500" />
-                            </span>
-                            <span v-if="catchItem.detections[0].label" class="ml-2 cursor-pointer"
-                                @click="confirmDelete(catchItem.id)">
-                                <Trash class="h-4 w-4 text-red-500" />
-                            </span>
-                        </p>
-                        <p class="text-gray-600 text-xs text-center">{{ catchItem.catch_date }}</p>
-                        <p class="text-gray-600 text-xs text-center">신뢰도: {{
-                            (catchItem.detections[0].confidence * 100).toFixed(2) }}%</p>
                     </div>
                 </div>
-                <div v-else-if="!loading" class="text-gray-500 text-center">아직 잡은 물고기가 없습니다.</div>
-                <div v-if="loading" class="text-center text-gray-500 mt-4">Loading...</div>
-                <div ref="loadMoreTrigger" class="text-center text-gray-500 mt-4"></div>
-                <div v-if="isEditPopupVisible"
-                    class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-20">
-                    <div class="bg-white p-6 rounded-lg shadow-lg w-80">
-                        <h2 class="text-lg mb-4 text-center">데이터 수정</h2>
-                        <div class="mb-4">
-                            <label class="block text-sm mb-1">라벨(Name)</label>
-                            <input v-model="selectedCatch.detections[0].label" class="border p-2 w-full rounded" />
+            </div>
+        </div>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="max-w-4xl mx-auto px-4 py-6">
+            <!-- 초기 로딩 상태 -->
+            <div v-if="loading" class="fixed inset-0 flex justify-center items-center bg-white bg-opacity-75 z-50">
+                <div class="flex flex-col items-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
+                    <span class="text-sm text-gray-500">로딩중...</span>
+                </div>
+            </div>
+
+            <!-- 데이터 없음 상태 -->
+            <div v-else-if="!filteredCatches.length" class="flex flex-col items-center justify-center py-12 text-gray-500">
+                <Fish class="w-16 h-16 mb-4 text-gray-300" />
+                <p class="text-lg">아직 잡은 물고기가 없습니다.</p>
+                <p class="text-sm mt-2">물고기를 잡아서 추억을 기록해보세요!</p>
+            </div>
+
+            <!-- 물고기 목록 -->
+            <div v-else>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div v-for="catchItem in filteredCatches" 
+                        :key="catchItem.id"
+                        class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden"
+                    >
+                        <!-- 이미지 섹션 -->
+                        <div class="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                            <img 
+                                :src="`${BACKEND_BASE_URL}/uploads/${catchItem.imageUrl}`" 
+                                alt="Catch Image"
+                                class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                                @click="openImagePopup(catchItem.imageUrl)"
+                            />
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm mb-1">날짜(YYYY-MM-DD)</label>
-                            <input type="date" v-model="selectedCatch.catch_date" class="border p-2 w-full rounded" />
+
+                        <!-- 정보 섹션 -->
+                        <div class="p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-lg font-semibold text-gray-800">
+                                    {{ catchItem.detections[0].label }}
+                                </h3>
+                                <div class="flex gap-2">
+                                    <button 
+                                        @click="openEditModal(catchItem)"
+                                        class="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                                    >
+                                        <Edit class="w-4 h-4 text-blue-500" />
+                                    </button>
+                                    <button 
+                                        @click="confirmDelete(catchItem.id)"
+                                        class="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                                    >
+                                        <Trash class="w-4 h-4 text-red-500" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <Calendar class="w-4 h-4 mr-2" />
+                                    {{ catchItem.catch_date }}
+                                </div>
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <Target class="w-4 h-4 mr-2" />
+                                    신뢰도: {{ (catchItem.detections[0].confidence * 100).toFixed(2) }}%
+                                </div>
+                                <div v-if="catchItem.weight_kg || catchItem.length_cm" class="flex items-center text-sm text-gray-600">
+                                    <Scale class="w-4 h-4 mr-2" />
+                                    <span v-if="catchItem.weight_kg">{{ catchItem.weight_kg }}kg</span>
+                                    <span v-if="catchItem.weight_kg && catchItem.length_cm" class="mx-2">|</span>
+                                    <span v-if="catchItem.length_cm">{{ catchItem.length_cm }}cm</span>
+                                </div>
+                                <div v-if="catchItem.memo" class="flex items-start text-sm text-gray-600">
+                                    <FileText class="w-4 h-4 mr-2 mt-0.5" />
+                                    <p class="line-clamp-2">{{ catchItem.memo }}</p>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm mb-1">신뢰도(1~100%)</label>
-                            <input type="number" step="0.01" v-model.number="confidenceInput"
-                                class="border p-2 w-full rounded" />
                         </div>
-                        <div class="flex justify-between">
-                            <button @click="saveEdit"
-                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors duration-300">저장</button>
-                            <button @click="isEditPopupVisible = false"
-                                class="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400 transition-colors duration-300">취소</button>
                         </div>
                     </div>
                 </div>
-                <div v-if="isImagePopupVisible"
-                    class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-30"
-                    @click="isImagePopupVisible = false">
-                    <div class="relative flex justify-center items-center max-w-full max-h-full" @click.stop>
-                        <img :src="popupImageUrl" alt="Popup Image"
-                            class="max-w-full max-h-full object-contain rounded-lg border border-gray-200 shadow-lg" />
-                        <button @click="isImagePopupVisible = false"
-                            class="absolute top-2 right-2 bg-white text-black rounded-full p-1 hover:bg-gray-200 transition-colors duration-300">
-                            &times;
-                        </button>
+
+                <!-- 추가 로딩 인디케이터 -->
+                <div v-if="isLoadingMore" class="fixed inset-0 flex justify-center items-center bg-white bg-opacity-75 z-50">
+                    <div class="flex flex-col items-center">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mb-2"></div>
+                        <span class="text-sm text-gray-500">물이터를 불러오는 중...</span>
                     </div>
                 </div>
-            </main>
+
+                <!-- 더 보기 트리거 -->
+                <div v-if="hasMoreItems" 
+                    ref="loadMoreTrigger" 
+                    class="h-10 mt-6">
+                </div>
+            </div>
+        </main>
+
+        <!-- 모달 컴포넌트들 -->
+        <EditFishModal
+            v-if="showEditModal"
+            :isVisible="showEditModal"
+            :catchData="selectedCatch"
+            @close="showEditModal = false"
+            @save="handleFishDataSave"
+        />
+
+        <!-- 이미지 팝업 -->
+        <div v-if="isImagePopupVisible"
+            class="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50 p-4"
+            @click="isImagePopupVisible = false">
+            <div class="relative w-full max-w-4xl max-h-[90vh] flex items-center justify-center" @click.stop>
+                <div class="relative">
+                    <img 
+                        :src="popupImageUrl" 
+                        alt="Popup Image"
+                        class="w-auto h-auto max-w-full max-h-[85vh] rounded-lg shadow-xl object-contain"
+                    />
+                    <button 
+                        @click="isImagePopupVisible = false"
+                        class="absolute top-4 right-4 p-2 bg-white rounded-full hover:bg-gray-100 transition-colors shadow-lg"
+                    >
+                        <X class="w-5 h-5 text-gray-600" />
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue';
 import { useStore } from 'vuex';
-import { Edit, Trash } from 'lucide-vue-next';
+import { Edit, Trash, Search, Fish, Calendar, Target, Scale, FileText, X } from 'lucide-vue-next';
+import EditFishModal from '../components/EditFishModal.vue';
 
 const store = useStore();
-const catches = computed(() => store.getters.catches);
+const catches = computed(() => store.getters.catches || []);
 const loading = ref(true);
-const isEditPopupVisible = ref(false);
+const showEditModal = ref(false);
 const selectedCatch = ref(null);
-const displayedCatches = ref([]);
-const confidenceInput = computed({
-    get() {
-        return selectedCatch.value ? (parseFloat(selectedCatch.value.detections[0].confidence) * 100).toFixed(2) : '100.00';
-    },
-    set(value) {
-        if (selectedCatch.value) {
-            selectedCatch.value.detections[0].confidence = (value / 100).toFixed(2);
-        }
-    }
-});
-const itemsToLoad = 8;
+const initialLoad = 2;
+const itemsToLoad = 2;
+const displayCount = ref(initialLoad);
 const loadMoreTrigger = ref(null);
 const isImagePopupVisible = ref(false);
 const popupImageUrl = ref('');
 const searchQuery = ref('');
 const sortOption = ref('latest');
-
-const filteredCatches = computed(() => {
-    const catchesFiltered = displayedCatches.value.filter(catchItem => {
-        return catchItem.detections[0].label.toLowerCase().includes(searchQuery.value.toLowerCase());
-    });
-
-    if (sortOption.value === 'latest') {
-        return catchesFiltered.sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
-    } else {
-        return catchesFiltered.sort((a, b) => new Date(a.catch_date) - new Date(b.catch_date));
-    }
-});
+const isLoadingMore = ref(false);
 
 // Define backend base URL
 const BACKEND_BASE_URL = 'http://localhost:5000';
 
-onMounted(() => {
+let observer = null;
+
+const totalFilteredItems = computed(() => {
+    if (!catches.value) return 0;
+    const filtered = catches.value.filter(catchItem => 
+        catchItem.detections[0].label.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
+    return filtered.length;
+});
+
+const hasMoreItems = computed(() => {
+    return displayCount.value < totalFilteredItems.value;
+});
+
+const filteredCatches = computed(() => {
+    if (!catches.value) return [];
+    const allFilteredCatches = catches.value.filter(catchItem => {
+        return catchItem.detections[0].label.toLowerCase().includes(searchQuery.value.toLowerCase());
+    });
+
+    const sortedCatches = sortOption.value === 'latest'
+        ? allFilteredCatches.sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date))
+        : allFilteredCatches.sort((a, b) => new Date(a.catch_date) - new Date(b.catch_date));
+    
+    return sortedCatches.slice(0, displayCount.value);
+});
+
+onMounted(async () => {
     if (store.getters.isAuthenticated) {
-        store.dispatch('fetchCatches').then(() => {
-            const sortedCatches = store.getters.catches.slice().sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
-            displayedCatches.value = sortedCatches;
+        try {
+            loading.value = true;
+            await store.dispatch('fetchCatches');
+            displayCount.value = initialLoad;
+            nextTick(() => {
+                setupIntersectionObserver();
+            });
+        } catch (error) {
+            console.error('Error fetching catches:', error);
+        } finally {
             loading.value = false;
-        }).catch(() => {
-            loading.value = false;
-        });
+        }
     } else {
         loading.value = false;
     }
+});
 
-    const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !loading.value) {
+function setupIntersectionObserver() {
+    if (observer) {
+        observer.disconnect();
+    }
+
+    observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore.value && hasMoreItems.value) {
+            console.log('Loading more items...', {
+                currentCount: displayCount.value,
+                totalItems: totalFilteredItems.value
+            });
             loadMoreCatches();
         }
     }, {
         root: null,
-        rootMargin: '0px',
-        threshold: 1.0
+        rootMargin: '50px',
+        threshold: 0
     });
 
-    if (loadMoreTrigger.value) {
-        observer.observe(loadMoreTrigger.value);
-    }
-});
-
-function loadMoreCatches() {
-    loading.value = true;
-    setTimeout(() => {
-        const currentLength = displayedCatches.value.length;
-        const sortedCatches = catches.value.slice().sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date));
-        const moreCatches = sortedCatches.slice(currentLength, currentLength + itemsToLoad);
-        displayedCatches.value = [...displayedCatches.value, ...moreCatches];
-        loading.value = false;
-    }, 1000); // Simulate loading delay
+    nextTick(() => {
+        if (loadMoreTrigger.value) {
+            observer.observe(loadMoreTrigger.value);
+        }
+    });
 }
 
-function openEditPopup(catchItem) {
-    console.log("Opening edit popup for:", catchItem); // Inspect the catch item
-    if (!catchItem.id) { // Changed from '_id' to 'id'
+function preloadImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(url);
+        img.onerror = () => reject(url);
+        img.src = url;
+    });
+}
+
+function loadMoreCatches() {
+    if (isLoadingMore.value) return;
+    isLoadingMore.value = true;
+
+    const loadNextBatch = async () => {
+        if (!catches.value || !catches.value.length) {
+            isLoadingMore.value = false;
+            return;
+        }
+
+        const allFilteredCatches = catches.value.filter(catchItem => 
+            catchItem.detections[0].label.toLowerCase().includes(searchQuery.value.toLowerCase())
+        );
+
+        const sortedCatches = sortOption.value === 'latest'
+            ? allFilteredCatches.sort((a, b) => new Date(b.catch_date) - new Date(a.catch_date))
+            : allFilteredCatches.sort((a, b) => new Date(a.catch_date) - new Date(b.catch_date));
+
+        const nextItems = sortedCatches.slice(
+            displayCount.value,
+            displayCount.value + itemsToLoad
+        );
+
+        if (nextItems.length === 0) {
+            isLoadingMore.value = false;
+            return;
+        }
+
+        try {
+            const imagePromises = nextItems.map(item => 
+                preloadImage(`${BACKEND_BASE_URL}/uploads/${item.imageUrl}`)
+            );
+
+            await Promise.allSettled(imagePromises);
+
+            console.log('Adding more items:', {
+                before: displayCount.value,
+                adding: itemsToLoad,
+                after: displayCount.value + itemsToLoad,
+                nextItemsCount: nextItems.length
+            });
+            displayCount.value += itemsToLoad;
+
+            nextTick(() => {
+                setupIntersectionObserver();
+            });
+        } catch (error) {
+            console.error('Error loading images:', error);
+        } finally {
+            isLoadingMore.value = false;
+        }
+    };
+
+    loadNextBatch();
+}
+
+function openEditModal(catchItem) {
+    console.log("Opening edit modal for:", catchItem);
+    if (!catchItem.id) {
         console.error("Cannot open edit popup: 'id' is undefined.");
         alert("수정할 수 없는 항목입니다: 식별자가 없습니다.");
         return;
     }
     selectedCatch.value = { ...catchItem };
-    selectedCatch.value.detections[0].confidence = parseFloat(selectedCatch.value.detections[0].confidence); // Ensure it's a number
-    isEditPopupVisible.value = true;
+    selectedCatch.value.detections[0].confidence = parseFloat(selectedCatch.value.detections[0].confidence);
+    showEditModal.value = true;
 }
 
-function saveEdit() {
-    const updatedCatch = { ...selectedCatch.value };
-    if (!updatedCatch.id) { // Changed from '_id' to 'id'
-        console.error("Save failed: 'id' is undefined.");
-        alert("데이터 저장에 실패했습니다: 식별자가 없습니다.");
-        return;
+const handleFishDataSave = async (updatedData) => {
+    try {
+        await store.dispatch('updateCatch', updatedData);
+        showEditModal.value = false;
+    } catch (error) {
+        console.error('Error saving fish data:', error);
+        alert('물고기 정보 저장에 실패했습니다.');
     }
-    // Ensure catch_date is correctly formatted
-    if (updatedCatch.catch_date) {
-        updatedCatch.catch_date = new Date(updatedCatch.catch_date).toISOString().split('T')[0];
-    }
-    // Ensure confidence is saved with up to two decimal places
-    updatedCatch.detections[0].confidence = parseFloat(updatedCatch.detections[0].confidence).toFixed(2);
-    store.dispatch('updateCatch', updatedCatch).then((response) => {
-        console.log("Update response:", response); // Log the response from the server
-        // Update displayedCatches after successful update
-        const index = displayedCatches.value.findIndex(catchItem => catchItem.id === updatedCatch.id); // Changed from '_id' to 'id'
-        if (index !== -1) {
-            displayedCatches.value[index] = { ...updatedCatch };
-        }
-        isEditPopupVisible.value = false;
-    }).catch((error) => {
-        console.error("Update error:", error.response ? error.response.data : error.message); // Detailed error logging
-        alert('데이터 업데이트에 실패했습니다.');
-    });
-}
+};
 
 function openImagePopup(imageUrl) {
-    popupImageUrl.value = `${BACKEND_BASE_URL}/uploads/${imageUrl}`; // Updated to include BACKEND_BASE_URL
+    popupImageUrl.value = `${BACKEND_BASE_URL}/uploads/${imageUrl}`;
     isImagePopupVisible.value = true;
 }
 
 function confirmDelete(catchId) {
-    if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+    if (confirm('정말로 항목을 삭제하시겠습니까?')) {
         deleteCatch(catchId);
     }
 }
 
 function deleteCatch(catchId) {
     store.dispatch('deleteCatch', catchId).then(() => {
-        displayedCatches.value = displayedCatches.value.filter(catchItem => catchItem.id !== catchId);
+        const currentTotal = totalFilteredItems.value;
+        displayCount.value = Math.min(displayCount.value, currentTotal);
     }).catch((error) => {
-        console.error("Delete error:", error.response ? error.response.data : error.message); // Detailed error logging
+        console.error("Delete error:", error.response ? error.response.data : error.message);
         alert('데이터 삭제에 실패했습니다.');
     });
 }
+
+watch([searchQuery, sortOption], () => {
+    displayCount.value = initialLoad;
+    nextTick(() => {
+        setupIntersectionObserver();
+    });
+});
+
+watch(() => catches.value, () => {
+    nextTick(() => {
+        setupIntersectionObserver();
+    });
+}, { deep: true });
+
+onUnmounted(() => {
+    if (observer) {
+        observer.disconnect();
+    }
+});
 </script>
 
 <style scoped>
-.grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-/* Optional: style the edit icon if needed */
-.cursor-pointer:hover svg {
-    stroke: #3b82f6;
+.grid > div {
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
 }
 
-.fixed {
-    position: fixed;
-}
-
-.absolute {
-    position: absolute;
-}
-
-/* Ensure pop-up images are displayed correctly */
-.object-contain {
-    object-fit: contain;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>

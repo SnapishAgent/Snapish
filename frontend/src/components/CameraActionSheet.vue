@@ -97,13 +97,15 @@ const handleOption = (action) => {
 const onFileChange = async (event) => {
     const file = event.target.files[0];
     if (file) {
-        const token = localStorage.getItem('token');
-        if (token) {
-            // ...existing code to send image as FormData with token...
-            const formData = new FormData();
-            formData.append('image', file);
+        try {
+            // 전역 로딩 상태 활성화
+            store.dispatch('setGlobalLoading', true);
+            
+            const token = localStorage.getItem('token');
+            if (token) {
+                const formData = new FormData();
+                formData.append('image', file);
 
-            try {
                 const response = await axios.post('/backend/predict', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -111,27 +113,29 @@ const onFileChange = async (event) => {
                     },
                     withCredentials: true,
                 });
-                handlePredictResponse(response.data);
-            } catch (error) {
-                console.error('Error during Axios POST:', error);
-                alert('이미지 업로드 중 오류가 발생했습니다.');
+                await handlePredictResponse(response.data);
+            } else {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    const image_base64 = reader.result.split(',')[1];
+                    try {
+                        const response = await axios.post('/backend/predict', {
+                            image_base64,
+                        });
+                        await handlePredictResponse(response.data);
+                    } catch (error) {
+                        console.error('Error during Axios POST:', error);
+                        alert('이미지 업로드 중 오류가 발생했습니다.');
+                    }
+                };
+                reader.readAsDataURL(file);
             }
-        } else {
-            // Read file as base64 and send it
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const image_base64 = reader.result.split(',')[1]; // Remove data:image/*;base64,
-                try {
-                    const response = await axios.post('/backend/predict', {
-                        image_base64,
-                    });
-                    handlePredictResponse(response.data);
-                } catch (error) {
-                    console.error('Error during Axios POST:', error);
-                    alert('이미지 업로드 중 오류가 발생했습니다.');
-                }
-            };
-            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('Error during file upload:', error);
+            alert('이미지 업로드 중 오류가 발생했습니다.');
+        } finally {
+            // 전역 로딩 상태 비활성화
+            store.dispatch('setGlobalLoading', false);
         }
     }
 };

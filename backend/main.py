@@ -144,6 +144,11 @@ class Catch(Base):
     fish_size_cm = Column(DECIMAL(5, 2))
     photo_url = Column(String(255))
     exif_data = Column(JSON)
+    weight_kg = Column(DECIMAL(10, 3), nullable=True)  # 무게(kg)
+    length_cm = Column(DECIMAL(10, 2), nullable=True)  # 길이(cm)
+    latitude = Column(DECIMAL(10, 8), nullable=True)  # 위도
+    longitude = Column(DECIMAL(11, 8), nullable=True)  # 경도
+    memo = Column(Text, nullable=True)  # 메모
 
     user = relationship('User', back_populates='catches')
     location = relationship('Location', back_populates='catches')  # Existing line
@@ -156,8 +161,10 @@ class AIConsent(Base):
     __tablename__ = 'AIConsent'
 
     consent_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('Users.user_id', ondelete='CASCADE'), unique=True)
+    user_id = Column(Integer, ForeignKey('Users.user_id', ondelete='CASCADE'))
     consent_given = Column(Boolean, default=False)
+    consent_date = Column(DateTime, default=datetime.utcnow)  # 동의 날짜 추가
+    consent_type = Column(String(50))  # 동의 유형 추가 (예: 'fish_data', 'privacy')
     created_at = Column(DateTime, default=datetime.utcnow)
     last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -275,9 +282,21 @@ Base.metadata.create_all(engine)
 
 # Flask 앱 초기화
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:8080"}}, supports_credentials=True)
+CORS(app, resources={r"/*": {
+    "origins": "http://localhost:8080",
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}}, supports_credentials=True)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = YOLO('./models/yolo11m_with_augmentations3_conf85.pt').to(device)
+
+# 초시 헤더를 위한 after_request 데코레이터를 앱 초기화 직후에 추가
+@app.after_request
+def add_header(response):
+    if request.path.startswith('/uploads/'):
+        response.cache_control.max_age = 31536000  # 1년
+        response.cache_control.public = True
+    return response
 
 # 초기 DB install
 initialize_service()
@@ -461,23 +480,45 @@ def login():
     finally:
         session.close()
 
+# 이미지 최적화 함수 추가
+def optimize_image(image, max_size=1024):
+    """Optimize image size and quality for mobile"""
+    if max(image.size) > max_size:
+        ratio = max_size / max(image.size)
+        new_size = tuple(int(dim * ratio) for dim in image.size)
+        image = image.resize(new_size, Image.Resampling.LANCZOS)
+    
+    # Convert to RGB if necessary
+    if image.mode in ('RGBA', 'P'):
+        image = image.convert('RGB')
+    
+    # Optimize
+    buffer = io.BytesIO()
+    image.save(buffer, format='JPEG', quality=85, optimize=True)
+    buffer.seek(0)
+    return buffer
+
+# predict 라우트 수정
 @app.route('/backend/predict', methods=['POST'])
 def predict():
-    # Get the image either from 'image' file or 'image_base64' in JSON
-    if 'image' in request.files:
-        file = request.files['image']
-        if not allowed_file(file.filename):
-            return jsonify({'error': '유효한 이미지 파일을 업로드해주세요.'}), 400
-        img = Image.open(file.stream).convert('RGB')
-    else:
-        data = request.get_json()
-        image_base64 = data.get('image_base64')
-        if not image_base64:
-            return jsonify({'error': '유효한 이미지 데이터를 업로드해주세요.'}), 400
-        image_data = base64.b64decode(image_base64)
-        img = Image.open(io.BytesIO(image_data)).convert('RGB')
-
     try:
+        if 'image' in request.files:
+            file = request.files['image']
+            if not allowed_file(file.filename):
+                return jsonify({'error': '유효한 이미지 파일을 업로드해주세요.'}), 400
+            img = Image.open(file.stream).convert('RGB')
+        else:
+            data = request.get_json()
+            image_base64 = data.get('image_base64')
+            if not image_base64:
+                return jsonify({'error': '유효한 이미지 데이터를 업로드해주세요.'}), 400
+            image_data = base64.b64decode(image_base64)
+            img = Image.open(io.BytesIO(image_data)).convert('RGB')
+
+        # 이미지 최적화
+        optimized_buffer = optimize_image(img)
+        img = Image.open(optimized_buffer)
+
         results = model(img, exist_ok=True, device=device)
         detections = []
         
@@ -614,92 +655,130 @@ def recent_activities(user_id):
 
 @app.route('/catches', methods=['POST'])
 @token_required
-def add_catch(user_id):
+def create_catch(user_id):
     data = request.get_json()
-    imageUrl = data.get('imageUrl')
-    detections = data.get('detections')
-
-    if not imageUrl or not detections:
-        return jsonify({'message': '이미지 URL 또는 감지 결과가 필요합니다.'}), 400
-
     session = Session()
-    current_user = session.query(User).filter_by(user_id=user_id).first()
-    if not current_user:
+    try:
+        new_catch = Catch(
+            user_id=user_id,
+            photo_url=data.get('imageUrl'),
+            exif_data=data.get('detections'),
+            catch_date=datetime.strptime(data.get('catch_date'), '%Y-%m-%d')
+        )
+        session.add(new_catch)
+        session.commit()
+        
+        return jsonify({
+            'id': new_catch.catch_id,
+            'imageUrl': new_catch.photo_url,
+            'detections': new_catch.exif_data,
+            'catch_date': new_catch.catch_date.strftime('%Y-%m-%d'),
+            'weight_kg': float(new_catch.weight_kg) if new_catch.weight_kg else None,
+            'length_cm': float(new_catch.length_cm) if new_catch.length_cm else None,
+            'latitude': float(new_catch.latitude) if new_catch.latitude else None,
+            'longitude': float(new_catch.longitude) if new_catch.longitude else None,
+            'memo': new_catch.memo,
+            'message': '캐치가 성공적으로 추가되었습니다.'
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
         session.close()
-        return jsonify({'message': 'User not found'}), 404
-
-    new_catch = Catch(
-        user_id=current_user.user_id,
-        photo_url=imageUrl,
-        exif_data=detections,
-        catch_date=datetime.utcnow()
-    )
-    session.add(new_catch)
-    session.commit()
-    session.close()
-
-    return jsonify({'message': '캐치가 성공적으로 추가되었습니다.'}), 201
 
 @app.route('/catches', methods=['GET'])
 @token_required
 def get_catches(user_id):
     session = Session()
-    current_user = session.query(User).filter_by(user_id=user_id).first()
-    if not current_user:
+    try:
+        current_user = session.query(User).filter_by(user_id=user_id).first()
+        if not current_user:
+            return jsonify({'message': 'User not found'}), 404
+
+        catches = session.query(Catch).filter_by(user_id=current_user.user_id).all()
+        
+        # 모든 필요한 데이터를 포함하여 반환
+        return jsonify([{
+            'id': catch.catch_id,
+            'imageUrl': catch.photo_url,
+            'detections': catch.exif_data,
+            'catch_date': catch.catch_date.strftime('%Y-%m-%d'),
+            'weight_kg': float(catch.weight_kg) if catch.weight_kg else None,
+            'length_cm': float(catch.length_cm) if catch.length_cm else None,
+            'latitude': float(catch.latitude) if catch.latitude else None,
+            'longitude': float(catch.longitude) if catch.longitude else None,
+            'memo': catch.memo
+        } for catch in catches])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
         session.close()
-        return jsonify({'message': 'User not found'}), 404
-
-    catches = session.query(Catch).filter_by(user_id=current_user.user_id).all()
-    session.close()
-
-    return jsonify([{
-        'id': catch.catch_id,  # Added 'id' field
-        'imageUrl': catch.photo_url,
-        'detections': catch.exif_data,
-        'catch_date': catch.catch_date.strftime('%Y-%m-%d')
-    } for catch in catches])
 
 @app.route('/catches/<int:catch_id>', methods=['PUT'])
 @token_required
 def update_catch(user_id, catch_id):
     data = request.get_json()
-    if not data:
-        logging.error("Invalid input: No data provided")
-        return jsonify({"error": "Invalid input"}), 400
-
     session = Session()
-    current_user = session.query(User).filter_by(user_id=user_id).first()
-    if not current_user:
-        session.close()
-        return jsonify({'message': 'User not found'}), 404
-
-    catch = session.query(Catch).filter_by(catch_id=catch_id, user_id=current_user.user_id).first()
-    if not catch:
-        logging.error(f"Catch not found: catch_id={catch_id}, user_id={current_user.user_id}")
-        session.close()
-        return jsonify({"error": "Catch not found"}), 404
-
     try:
-        logging.info(f"Updating catch: {catch_id} for user: {current_user.user_id}")
-        catch.photo_url = data.get('imageUrl', catch.photo_url)
-        catch.exif_data = data.get('detections', catch.exif_data)
+        catch = session.query(Catch).filter_by(catch_id=catch_id, user_id=user_id).first()
+        if not catch:
+            session.close()
+            return jsonify({'error': 'Catch not found'}), 404
+
+        # 데이터 유효성 검사
+        try:
+            if 'weight_kg' in data:
+                weight = float(data['weight_kg']) if data['weight_kg'] is not None else None
+                if weight is not None and (weight < 0 or weight > 999.999):
+                    return jsonify({'error': 'Weight must be between 0 and 999.999 kg'}), 400
+                catch.weight_kg = weight
+
+            if 'length_cm' in data:
+                length = float(data['length_cm']) if data['length_cm'] is not None else None
+                if length is not None and (length < 0 or length > 999.99):
+                    return jsonify({'error': 'Length must be between 0 and 999.99 cm'}), 400
+                catch.length_cm = length
+
+            if 'latitude' in data:
+                lat = float(data['latitude']) if data['latitude'] is not None else None
+                if lat is not None and (lat < -90 or lat > 90):
+                    return jsonify({'error': 'Latitude must be between -90 and 90'}), 400
+                catch.latitude = lat
+
+            if 'longitude' in data:
+                lon = float(data['longitude']) if data['longitude'] is not None else None
+                if lon is not None and (lon < -180 or lon > 180):
+                    return jsonify({'error': 'Longitude must be between -180 and 180'}), 400
+                catch.longitude = lon
+        except ValueError:
+            return jsonify({'error': 'Invalid numeric value provided'}), 400
+
+        # Update existing fields
+        if 'detections' in data:
+            catch.exif_data = data['detections']
         if 'catch_date' in data:
             catch.catch_date = datetime.strptime(data['catch_date'], '%Y-%m-%d')
+        if 'memo' in data:
+            catch.memo = data['memo']
+
         session.commit()
-        updated_catch = {
+        return jsonify({
             'id': catch.catch_id,
             'imageUrl': catch.photo_url,
             'detections': catch.exif_data,
-            'catch_date': catch.catch_date.strftime('%Y-%m-%d')
-        }
-        logging.info(f"Catch updated successfully: {updated_catch}")
-        session.close()
-        return jsonify(updated_catch), 200
+            'catch_date': catch.catch_date.strftime('%Y-%m-%d'),
+            'weight_kg': float(catch.weight_kg) if catch.weight_kg else None,
+            'length_cm': float(catch.length_cm) if catch.length_cm else None,
+            'latitude': float(catch.latitude) if catch.latitude else None,
+            'longitude': float(catch.longitude) if catch.longitude else None,
+            'memo': catch.memo
+        })
     except Exception as e:
-        logging.error(f"Error updating catch: {e}")
         session.rollback()
+        logging.error(f"Error updating catch: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
         session.close()
-        return jsonify({"error": str(e)}), 500
 
 @app.route('/catches/<int:catch_id>', methods=['DELETE'])
 @token_required
@@ -826,7 +905,7 @@ def upload_avatar(user_id):
     else:
         return jsonify({'error': 'Invalid file type'}), 400
     
-# 요청 위치 기준 가장 가까운 관측소 위치 반환 
+# 요청 위치 기준 가장 가까운 관소 위치 반환 
 @app.route('/backend/closest-sealoc', methods=['POST'])
 def get_closest_sealoc():
     user_lat = request.form.get('lat')
@@ -851,7 +930,7 @@ def get_closest_sealoc():
         LIMIT 1;
     """)
     
-    # 조수간만 태그 + 없음 제거
+    # 조수간 태그 + 없음 제거
     query_obspretab = text("""
         SELECT obs_station_id, obs_post_id, obs_post_name,
             ST_Distance_Sphere(POINT(:lon, :lat), POINT(obs_lon, obs_lat)) AS distance
@@ -863,7 +942,7 @@ def get_closest_sealoc():
     """)
 
     try:
-        # 두 개의 쿼리 실행
+        # 두 개 쿼리 실행
         result_obsrecent = session.execute(query_obsrecent, {'lat': user_lat, 'lon': user_lon}).fetchone()
         result_obspretab = session.execute(query_obspretab, {'lat': user_lat, 'lon': user_lon}).fetchone()
 
@@ -952,3 +1031,73 @@ def remove_session(exception=None):
 # Ensure the backend server is running on port 5000
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
+
+@app.route('/api/consent/check', methods=['GET'])
+@token_required
+def check_consent(user_id):
+    session = Session()
+    try:
+        consent = session.query(AIConsent).filter_by(user_id=user_id).first()
+        return jsonify({
+            'hasConsent': bool(consent and consent.consent_given),
+            'lastConsentDate': consent.consent_date.isoformat() if consent else None
+        })
+    finally:
+        session.close()
+
+@app.route('/api/consent', methods=['POST'])
+@token_required
+def update_consent(user_id):
+    data = request.get_json()
+    consent_given = data.get('consent', False)
+    
+    session = Session()
+    try:
+        consent = session.query(AIConsent).filter_by(user_id=user_id).first()
+        if consent:
+            consent.consent_given = consent_given
+            consent.consent_date = datetime.utcnow()
+        else:
+            consent = AIConsent(
+                user_id=user_id,
+                consent_given=consent_given,
+                consent_date=datetime.utcnow()
+            )
+            session.add(consent)
+        session.commit()
+        return jsonify({'message': 'Consent updated successfully'})
+    finally:
+        session.close()
+
+# 서비스 목록 API 추가
+@app.route('/api/services', methods=['GET'])
+def get_services():
+    # 기본 서비스 목록 반환
+    services = [
+        {
+            "id": 1,
+            "name": "물때 정보",
+            "icon": "/icons/tide.png",
+            "route": "/map-location-service"
+        },
+        {
+            "id": 2,
+            "name": "날씨 정보",
+            "icon": "/icons/weather.png",
+            "route": "/map-location-service"
+        },
+        {
+            "id": 3,
+            "name": "내 기록",
+            "icon": "/icons/record.png",
+            "route": "/catches"
+        },
+        {
+            "id": 4,
+            "name": "커뮤니티",
+            "icon": "/icons/community.png",
+            "route": "/community"
+        },
+        # ��가 서비스들...
+    ]
+    return jsonify(services)
