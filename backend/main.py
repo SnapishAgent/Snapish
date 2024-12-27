@@ -1101,7 +1101,7 @@ def get_closest_sealoc():
             }
 
             # KHOA API 호출
-            try {
+            try:
                 api_data = get_sea_weather_by_seapostid({
                     'obsrecent': obsrecent_data['obs_post_id'],
                     'obspretab': obspretab_data['obs_post_id']
@@ -1110,27 +1110,25 @@ def get_closest_sealoc():
                 # 프론트엔드에 보낼 데이터 구성
                 closest_data = {
                     'obsrecent': {
-                        ...obsrecent_data,
+                        **obsrecent_data,
                         'api_response': api_data['obsrecent']
                     },
                     'obspretab': {
-                        ...obspretab_data,
+                        **obspretab_data,
                         'api_response': api_data['obspretab']
                     }
                 }
                 return jsonify(closest_data)
 
-            } catch (requests.exceptions.RequestException as e) {
+            except requests.exceptions.RequestException as e:
                 return jsonify({'error': f'API request failed: {e}'}), 500
-            }
 
-        } else {
+        else:
             return jsonify({'error': 'No tidal observations found'}), 404
-        }
 
-    } finally {
+    finally:
         session.close()
-    }
+        
         
 @app.route('/backend/get-weather', methods=['POST'])
 def get_weather_api():
@@ -1227,7 +1225,7 @@ def get_services():
             "icon": "/icons/community.png",
             "route": "/community"
         },
-        // 추가 서비스들...
+        # 추가 서비스들...
     ]
     return jsonify(services)
 
@@ -1248,11 +1246,11 @@ def get_posts(user_id):
         
         session = Session()
         
-        // Calculate total posts and pages
+        # Calculate total posts and pages
         total = session.query(CommunicationBoard).count()
         offset = (page - 1) * per_page
         
-        // Get posts with pagination
+        # Get posts with pagination
         posts = session.query(CommunicationBoard)\
             .order_by(CommunicationBoard.created_at.desc())\
             .offset(offset)\
@@ -1263,7 +1261,7 @@ def get_posts(user_id):
         for post in posts:
             user = session.query(User).get(post.user_id)
             
-            // Get like status for current user
+            # Get like status for current user
             is_liked = session.query(PostLike)\
                 .filter_by(post_id=post.post_id, user_id=user_id)\
                 .first() is not None
@@ -1283,7 +1281,7 @@ def get_posts(user_id):
             }
             result.append(post_data)
             
-        total_pages = (total + per_page - 1) // per_page
+        total_pages = (total + per_page - 1) # per_page
         
         return jsonify({
             'posts': result,
@@ -1302,7 +1300,7 @@ def get_posts(user_id):
 def create_post(user_id):
     session = Session()
     try:
-        // Get form data
+        # Get form data
         title = request.form.get('title')
         content = request.form.get('content')
         images = request.files.getlist('images')
@@ -1310,17 +1308,17 @@ def create_post(user_id):
         if not title or not content:
             return jsonify({'error': '제목과 내용은 필수입니다.'}), 400
 
-        // Create new post
+        # Create new post
         new_post = CommunicationBoard(
             user_id=user_id,
             title=title,
             content=content,
-            images=[],  // Initialize empty list for images
+            images=[],  # Initialize empty list for images
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
 
-        // Handle image uploads
+        # Handle image uploads
         for image in images:
             if image and allowed_file(image.filename):
                 try:
@@ -1335,7 +1333,7 @@ def create_post(user_id):
         session.add(new_post)
         session.commit()
 
-        // Get user info for response
+        # Get user info for response
         user = session.query(User).get(user_id)
 
         response_data = {
@@ -1377,17 +1375,17 @@ def get_post(user_id, post_id):
         if not user:
             return jsonify({'error': '게시물 작성자를 찾을 수 없습니다.'}), 500
 
-        // Check if the current user has liked this post
+        # Check if the current user has liked this post
         is_liked = session.query(PostLike).filter_by(
             post_id=post_id,
             user_id=user_id
         ).first() is not None
 
-        // Get counts
+        # Get counts
         likes_count = session.query(PostLike).filter_by(post_id=post_id).count()
         comments_count = session.query(PostComment).filter_by(post_id=post_id).count()
 
-        // Handle images safely
+        # Handle images safely
         images = []
         if post.images:
             if isinstance(post.images, list):
@@ -1431,20 +1429,20 @@ def update_post(user_id, post_id):
         new_images = request.files.getlist('images')
         removed_images = request.form.getlist('removed_images[]')
 
-        // Initialize images list if it doesn't exist
+        # Initialize images list if it doesn't exist
         if not hasattr(post, 'images') or post.images is None:
             post.images = []
         elif not isinstance(post.images, list):
             post.images = []
 
-        // Handle removed images
+        # Handle removed images
         if removed_images:
             logging.info(f"Removing images: {removed_images}")
             for image_url in removed_images:
                 if image_url in post.images:
                     try:
                         post.images.remove(image_url)
-                        // Delete the actual file
+                        # Delete the actual file
                         image_path = os.path.join(app.root_path, image_url.lstrip('/'))
                         if os.path.exists(image_path):
                             os.remove(image_path)
@@ -1452,7 +1450,7 @@ def update_post(user_id, post_id):
                     except Exception as e:
                         logging.error(f"Error removing image {image_url}: {str(e)}")
 
-        // Add new images
+        # Add new images
         for image in new_images:
             if image and allowed_file(image.filename):
                 try:
@@ -1464,14 +1462,14 @@ def update_post(user_id, post_id):
                 except Exception as e:
                     logging.error(f"Error saving image {image.filename}: {str(e)}")
 
-        // Update post content
+        # Update post content
         post.title = data.get('title', post.title)
         post.content = data.get('content', post.content)
         post.updated_at = datetime.utcnow()
 
         session.commit()
         
-        // Prepare response with updated data
+        # Prepare response with updated data
         response_data = {
             'message': '게시물이 성공적으로 수정되었습니다.',
             'post': {
@@ -1501,7 +1499,7 @@ def delete_post(user_id, post_id):
         if not post:
             return jsonify({'error': '게시물을 찾을 수 없거나 삭제 권한이 없습니다.'}), 404
 
-        // Delete all associated images
+        # Delete all associated images
         if post.images:
             for image_url in post.images:
                 image_path = os.path.join(UPLOAD_FOLDER, os.path.basename(image_url))
@@ -1524,19 +1522,19 @@ def delete_post(user_id, post_id):
 def toggle_like(user_id, post_id):
     session = Session()
     try:
-        // Check if post exists
+        # Check if post exists
         post = session.query(CommunicationBoard).get(post_id)
         if not post:
             return jsonify({'error': '게시물을 찾을 수 없습니다.'}), 404
 
-        // Check if user already liked the post
+        # Check if user already liked the post
         existing_like = session.query(PostLike).filter_by(
             post_id=post_id,
             user_id=user_id
         ).first()
 
         if existing_like:
-            // Unlike
+            # Unlike
             session.delete(existing_like)
             session.commit()
             likes_count = session.query(PostLike).filter_by(post_id=post_id).count()
@@ -1546,7 +1544,7 @@ def toggle_like(user_id, post_id):
                 'likes_count': likes_count
             })
         else:
-            // Like
+            # Like
             new_like = PostLike(post_id=post_id, user_id=user_id)
             session.add(new_like)
             session.commit()
@@ -1568,13 +1566,13 @@ def toggle_like(user_id, post_id):
 @token_required
 def get_comments(user_id, post_id):
     session = Session()
-    try {
-        // Check if post exists
+    try:
+        # Check if post exists
         post = session.query(CommunicationBoard).get(post_id)
         if not post:
             return jsonify({'error': '게시물을 찾을 수 없습니다.'}), 404
 
-        // Get comments with user information
+        # Get comments with user information
         comments = session.query(PostComment, User).join(
             User, PostComment.user_id == User.user_id
         ).filter(
@@ -1594,20 +1592,18 @@ def get_comments(user_id, post_id):
 
         return jsonify({'comments': comments_data})
 
-    } catch (Exception as e) {
+    except Exception as e:
         logging.error(f"Error getting comments for post {post_id}: {str(e)}")
         return jsonify({'error': '댓글을 불러오는 중 오류가 발생했습니다.'}), 500
-    } finally {
+    finally:
         session.close()
-    }
-}
 
 @app.route('/api/posts/<int:post_id>/comments', methods=['POST'])
 @token_required
 def create_comment(user_id, post_id):
     session = Session()
-    try {
-        // Check if post exists
+    try:
+        # Check if post exists
         post = session.query(CommunicationBoard).get(post_id)
         if not post:
             return jsonify({'error': '게시물을 찾을 수 없습니다.'}), 404
@@ -1616,7 +1612,7 @@ def create_comment(user_id, post_id):
         if not data or not data.get('content'):
             return jsonify({'error': '댓글 내용이 필요합니다.'}), 400
 
-        // Create new comment
+        # Create new comment
         new_comment = PostComment(
             post_id=post_id,
             user_id=user_id,
@@ -1625,7 +1621,7 @@ def create_comment(user_id, post_id):
         session.add(new_comment)
         session.commit()
 
-        // Get user info for response
+        # Get user info for response
         user = session.query(User).get(user_id)
         
         comment_data = {
@@ -1642,20 +1638,18 @@ def create_comment(user_id, post_id):
             'comment': comment_data
         })
 
-    } catch (Exception as e) {
+    except Exception as e:
         session.rollback()
         logging.error(f"Error creating comment for post {post_id}: {str(e)}")
         return jsonify({'error': '댓글 작성 중 오류가 발생했습니다.'}), 500
-    } finally {
+    finally:
         session.close()
-    }
-}
 
 @app.route('/api/posts/top', methods=['GET'])
 def get_top_posts():
     session = Session()
-    try {
-        // Get top 5 posts by likes
+    try:
+        # Get top 5 posts by likes
         top_posts = session.query(CommunicationBoard)\
             .outerjoin(PostLike)\
             .group_by(CommunicationBoard.post_id)\
@@ -1664,7 +1658,7 @@ def get_top_posts():
             .all()
 
         if not top_posts:
-            // If no posts with likes, get the most recent 5 posts
+            # If no posts with likes, get the most recent 5 posts
             top_posts = session.query(CommunicationBoard)\
                 .order_by(CommunicationBoard.created_at.desc())\
                 .limit(5)\
@@ -1688,19 +1682,17 @@ def get_top_posts():
             result.append(post_data)
 
         return jsonify(result)
-    } catch (Exception as e) {
+    except Exception as e:
         logging.error(f"Error getting top posts: {str(e)}")
         return jsonify({'error': 'Error fetching top posts'}), 500
-    } finally {
+    finally:
         session.close()
-    }
-}
         
-    // 애플리케이션 종료 시 세 제거
+    # 애플리케이션 종료 시 세 제거
 @app.teardown_appcontext
 def remove_session(exception=None):
     Session.remove()
 
-// Ensure the backend server is running on port 5000
+# Ensure the backend server is running on port 5000
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
