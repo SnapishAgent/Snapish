@@ -135,6 +135,7 @@ frontend/package-lock.json
 /backend/data/*
 
 #custom
+frontend/vue.config.js
 .DS_Store
 frontend/node_modules
 frontend/public/pics
