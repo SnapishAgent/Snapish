@@ -3,7 +3,7 @@ const baseUrl = process.env.VUE_APP_BASE_URL;
 
 module.exports = {
   devServer: {
-    port: 80, // 원하는 포트 번호로 변경
+    port: 81, // 원하는 포트 번호로 변경
     proxy: {
       "/": {
         target: baseUrl,

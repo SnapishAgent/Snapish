@@ -329,7 +329,7 @@ baseUrl = os.getenv('BASE_URL')
 # Flask 앱 초기화
 app = Flask(__name__)
 CORS(app, resources={r"/*": {
-    "origins": [f'{baseUrl}:5000', f'{baseUrl}:80'],  # Ensure this matches your frontend's origin
+    "origins": [f'{baseUrl}:5001', f'{baseUrl}:81'],  # Ensure this matches your frontend's origin
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization"]
 }}, supports_credentials=True)
